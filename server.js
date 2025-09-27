@@ -22,7 +22,7 @@ db.connect((err) => {
   console.log("✅ DB connected");
 });
 app.get("/", (req, res) => {
-  res.send("APi chayj vowis mysql");
+  res.send("Đây là web application, được chạy với mysql.Xin chào mọi người !!");
 });
 
 // CRUD viết trực tiếp ở đây
