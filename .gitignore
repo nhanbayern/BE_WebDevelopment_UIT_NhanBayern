@@ -20,3 +20,6 @@ build/
 
 # Optional
 *.log
+
+#services
+services.txt
