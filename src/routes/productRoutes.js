@@ -5,7 +5,7 @@ const {
   createProduct,
   updateProduct,
   deleteProduct,
-} = require("../models/product");
+} = require("../models/product"); // tức là nó sẽ require đến models ở folder models
 
 const router = express.Router();
 
