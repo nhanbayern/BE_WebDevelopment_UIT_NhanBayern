@@ -1,21 +1,58 @@
-const db = require("../config/db");
+import db from "../config/db.js";
 
-// Lấy toàn bộ sản phẩm (từ VIEW)
-const getAllProducts = async () => {
-  const [rows] = await db.promise().execute("SELECT * FROM view_products_full");
+/**
+ * 📦 Lấy toàn bộ sản phẩm
+ */
+export async function getAllProducts() {
+  const [rows] = await db.execute(`
+    SELECT 
+      product_id,
+      product_name,
+      alcohol_content,
+      volume_ml,
+      packaging_spec,
+      description,
+      cost_price,
+      sale_price,
+      specialty_province,
+      specialty_description,
+      primary_image
+    FROM view_products_full
+    ORDER BY product_id ASC
+  `);
   return rows;
-};
+}
 
-// Lấy 1 sản phẩm theo ID
-const getProductById = async (id) => {
-  const [rows] = await db
-    .promise()
-    .execute("SELECT * FROM view_products_full WHERE product_id = ?", [id]);
+/**
+ * 🔍 Lấy sản phẩm theo ID
+ */
+export async function getProductById(id) {
+  const [rows] = await db.execute(
+    `
+    SELECT 
+      product_id,
+      product_name,
+      alcohol_content,
+      volume_ml,
+      packaging_spec,
+      description,
+      cost_price,
+      sale_price,
+      specialty_province,
+      specialty_description,
+      primary_image
+    FROM view_products_full
+    WHERE product_id = ?
+    `,
+    [id]
+  );
   return rows[0];
-};
+}
 
-// Thêm sản phẩm mới
-const createProduct = async (productData) => {
+/**
+ * 🆕 Thêm sản phẩm mới
+ */
+export async function createProduct(productData) {
   const {
     product_name,
     price,
@@ -26,10 +63,12 @@ const createProduct = async (productData) => {
     image_url,
   } = productData;
 
-  const [result] = await db.promise().execute(
-    `INSERT INTO products 
+  const [result] = await db.execute(
+    `
+    INSERT INTO products 
     (product_name, price, stock_quantity, manufacturer_id, specialty_id, description, image_url)
-    VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+    `,
     [
       product_name,
       price,
@@ -41,10 +80,12 @@ const createProduct = async (productData) => {
     ]
   );
   return result;
-};
+}
 
-// Cập nhật sản phẩm
-const updateProduct = async (id, productData) => {
+/**
+ * ✏️ Cập nhật sản phẩm
+ */
+export async function updateProduct(id, productData) {
   const {
     product_name,
     price,
@@ -55,11 +96,13 @@ const updateProduct = async (id, productData) => {
     image_url,
   } = productData;
 
-  const [result] = await db.promise().execute(
-    `UPDATE products 
-     SET product_name = ?, price = ?, stock_quantity = ?, manufacturer_id = ?, 
-         specialty_id = ?, description = ?, image_url = ?
-     WHERE product_id = ?`,
+  const [result] = await db.execute(
+    `
+    UPDATE products 
+    SET product_name = ?, price = ?, stock_quantity = ?, manufacturer_id = ?, 
+        specialty_id = ?, description = ?, image_url = ?
+    WHERE product_id = ?
+    `,
     [
       product_name,
       price,
@@ -72,20 +115,15 @@ const updateProduct = async (id, productData) => {
     ]
   );
   return result;
-};
+}
 
-// Xóa sản phẩm
-const deleteProduct = async (id) => {
-  const [result] = await db
-    .promise()
-    .execute("DELETE FROM products WHERE product_id = ?", [id]);
+/**
+ * 🗑️ Xóa sản phẩm
+ */
+export async function deleteProduct(id) {
+  const [result] = await db.execute(
+    "DELETE FROM products WHERE product_id = ?",
+    [id]
+  );
   return result;
-};
-
-module.exports = {
-  getAllProducts,
-  getProductById,
-  createProduct,
-  updateProduct,
-  deleteProduct,
-};
+}
