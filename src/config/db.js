@@ -1,29 +1,33 @@
-import mysql from "mysql2";
+import { Sequelize } from "sequelize";
 import dotenv from "dotenv";
 
-// 🔧 Nạp biến môi trường từ file .env
 dotenv.config({ path: "./.env" });
 
-// ⚙️ Tạo connection pool (quản lý tự động kết nối MySQL)
-const db = mysql.createPool({
-  host: process.env.DB_HOST, // Địa chỉ host MySQL
-  user: process.env.DB_USER, // Tên user
-  password: process.env.DB_PASSWORD, // Mật khẩu
-  database: process.env.DB_NAME, // Tên database
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
-});
-
-// ✅ Kiểm tra kết nối (tùy chọn)
-db.getConnection((err, connection) => {
-  if (err) {
-    console.error("❌ Kết nối MySQL thất bại:", err.message);
-  } else {
-    console.log("✅ Đã kết nối MySQL Pool thành công!");
-    connection.release(); // Trả kết nối về pool
+// 🧠 Tạo instance Sequelize (ORM)
+const sequelize = new Sequelize(
+  process.env.DB_NAME, // Tên database
+  process.env.DB_USER, // Username
+  process.env.DB_PASSWORD, // Mật khẩu
+  {
+    host: process.env.DB_HOST, // Địa chỉ host
+    dialect: "mysql", // Loại DB
+    logging: false, // Tắt log SQL (bật để debug)
+    pool: {
+      max: 10,
+      min: 0,
+      acquire: 30000,
+      idle: 10000,
+    },
   }
-});
+);
 
-// 🧩 Export pool cho các module khác sử dụng
-export default db.promise(); // Dùng promise pool để hỗ trợ async/await
+// ✅ Kiểm tra kết nối
+try {
+  await sequelize.authenticate();
+  console.log("✅ Kết nối MySQL qua Sequelize thành công!");
+} catch (error) {
+  console.error("❌ Lỗi kết nối MySQL qua Sequelize:", error.message);
+}
+
+export default sequelize;
+// Đổi thành sequelize

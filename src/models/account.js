@@ -41,7 +41,7 @@ export const updateAccount = async (account_id, fields) => {
   const values = Object.values(fields);
   values.push(account_id);
   await db.execute(
-    `UPDATE employee_accounts SET ${updates} WHERE account_id = ?`,
+    `UPD  ATE employee_accounts SET ${updates} WHERE account_id = ?`,
     values
   );
 };

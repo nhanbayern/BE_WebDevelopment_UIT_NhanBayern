@@ -6,3 +6,4 @@ const [, , password = "1234", rounds = "10"] = process.argv;
 //đỗ hoàng phúc: 1234
 const hash = await bcrypt.hash(password, parseInt(rounds, 10));
 console.log(hash);
+// tạo tài khoản hash vào trong dbms

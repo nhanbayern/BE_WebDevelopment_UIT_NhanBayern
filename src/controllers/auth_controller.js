@@ -10,7 +10,7 @@ export const login = async (req, res) => {
   try {
     const { username, password } = req.body;
 
-    // 1️⃣ Kiểm tra dữ liệu đầu vào
+    // 1️⃣ Kiểm tra dữ liệu đ ầu vào
     if (!username || !password) {
       return res.status(400).json({
         message: "Vui lòng nhập username và password",
@@ -60,9 +60,9 @@ export const login = async (req, res) => {
 
     const token = jwt.sign(payload, process.env.JWT_SECRET, {
       expiresIn: "8h",
-    });
+    }); // Dùng thuật toán HMAC mặc định là HS256
 
-    // 6️⃣ Cập nhật thời điểm đăng nhập cuối
+    // 6️⃣ Cập nhật thời điểm đăng nhập cuối vào Db thông qua DBMS
     await db.execute(
       "UPDATE employee_accounts SET last_login = NOW() WHERE account_id = ?",
       [user.account_id]
