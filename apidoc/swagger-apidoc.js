@@ -12,7 +12,7 @@ const swaggerOptions = {
     servers: [
       {
         url: "http://localhost:3000/RuouOngTu",
-        description: "Local Server",
+        description: "Local Server (RuouOngTu base)",
       },
     ],
     components: {
@@ -21,6 +21,23 @@ const swaggerOptions = {
           type: "http",
           scheme: "bearer",
           bearerFormat: "JWT",
+        },
+      },
+      schemas: {
+        Customer: {
+          type: "object",
+          properties: {
+            id: { type: "string", example: "643f1a2b3c4d5e6f7g8h9i" },
+            username: { type: "string", example: "john_doe" },
+            email: { type: "string", example: "john@example.com" },
+            role: { type: "string", example: "customer" },
+            createdAt: {
+              type: "string",
+              format: "date-time",
+              example: "2025-11-18T12:34:56Z",
+            },
+          },
+          required: ["id", "username", "email"],
         },
       },
     },
@@ -36,6 +53,7 @@ const swaggerOptions = {
     "./src/routes/productRoutes.js",
     "./src/routes/regionRoutes.js",
     "./src/routes/authRoutes.js",
+    "./src/routes/customerAuthRoutes.js",
   ],
 };
 

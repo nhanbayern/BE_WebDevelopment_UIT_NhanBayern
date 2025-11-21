@@ -3,15 +3,15 @@ import dotenv from "dotenv";
 
 dotenv.config({ path: "./.env" });
 
-// 🧠 Tạo instance Sequelize (ORM)
 const sequelize = new Sequelize(
-  process.env.DB_NAME, // Tên database
-  process.env.DB_USER, // Username
-  process.env.DB_PASSWORD, // Mật khẩu
+  process.env.DB_NAME,
+  process.env.DB_USER,
+  process.env.DB_PASSWORD,
   {
-    host: process.env.DB_HOST, // Địa chỉ host
-    dialect: "mysql", // Loại DB
-    logging: false, // Tắt log SQL (bật để debug)
+    host: process.env.DB_HOST,
+    dialect: "mysql",
+    logging: true,
+    timezone: "+07:00",
     pool: {
       max: 10,
       min: 0,
@@ -21,13 +21,11 @@ const sequelize = new Sequelize(
   }
 );
 
-// ✅ Kiểm tra kết nối
 try {
   await sequelize.authenticate();
-  console.log("✅ Kết nối MySQL qua Sequelize thành công!");
+  console.log("Kết nối MySQL qua Sequelize thành công!");
 } catch (error) {
-  console.error("❌ Lỗi kết nối MySQL qua Sequelize:", error.message);
+  console.error("Lỗi kết nối MySQL qua Sequelize:", error.message);
 }
 
 export default sequelize;
-// Đổi thành sequelize

@@ -1,15 +1,19 @@
-import * as Product from "../models/product.js";
+import * as ProductService from "../services/product.service.js";
 
 /**
  * 📦 Lấy toàn bộ sản phẩm
  */
 export const getAllProductsController = async (req, res) => {
   try {
-    const products = await Product.getAllProducts();
+    const products = await ProductService.getAllProducts();
     res.status(200).json(products);
   } catch (err) {
     console.error("❌ Lỗi khi lấy danh sách sản phẩm:", err);
-    res.status(500).json({ message: "Lỗi server khi lấy danh sách sản phẩm" });
+    res
+      .status(err.status || 500)
+      .json({
+        message: err.message || "Lỗi server khi lấy danh sách sản phẩm",
+      });
   }
 };
 
@@ -18,17 +22,13 @@ export const getAllProductsController = async (req, res) => {
  */
 export const getProductByIdController = async (req, res) => {
   try {
-    const id = req.params.id;
-    const product = await Product.getProductById(id);
-
-    if (!product) {
-      return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
-    }
-
+    const product = await ProductService.getProductById(req.params.id);
     res.status(200).json(product);
   } catch (err) {
     console.error("❌ Lỗi khi lấy sản phẩm:", err);
-    res.status(500).json({ message: "Lỗi server khi lấy sản phẩm" });
+    res
+      .status(err.status || 500)
+      .json({ message: err.message || "Lỗi server khi lấy sản phẩm" });
   }
 };
 
@@ -37,11 +37,13 @@ export const getProductByIdController = async (req, res) => {
  */
 export const createProductController = async (req, res) => {
   try {
-    const result = await Product.createProduct(req.body);
-    res.status(201).json({ message: "Đã thêm sản phẩm mới", result });
+    const newProduct = await ProductService.createProduct(req.body);
+    res.status(201).json({ message: "Đã thêm sản phẩm mới", newProduct });
   } catch (err) {
     console.error("❌ Lỗi khi thêm sản phẩm:", err);
-    res.status(500).json({ message: "Lỗi server khi thêm sản phẩm" });
+    res
+      .status(err.status || 500)
+      .json({ message: err.message || "Lỗi server khi thêm sản phẩm" });
   }
 };
 
@@ -50,12 +52,13 @@ export const createProductController = async (req, res) => {
  */
 export const updateProductController = async (req, res) => {
   try {
-    const id = req.params.id;
-    const result = await Product.updateProduct(id, req.body);
-    res.status(200).json({ message: "Đã cập nhật sản phẩm", result });
+    const updated = await ProductService.updateProduct(req.params.id, req.body);
+    res.status(200).json({ message: "Đã cập nhật sản phẩm", updated });
   } catch (err) {
     console.error("❌ Lỗi khi cập nhật sản phẩm:", err);
-    res.status(500).json({ message: "Lỗi server khi cập nhật sản phẩm" });
+    res
+      .status(err.status || 500)
+      .json({ message: err.message || "Lỗi server khi cập nhật sản phẩm" });
   }
 };
 
@@ -64,11 +67,12 @@ export const updateProductController = async (req, res) => {
  */
 export const deleteProductController = async (req, res) => {
   try {
-    const id = req.params.id;
-    const result = await Product.deleteProduct(id);
+    const result = await ProductService.deleteProduct(req.params.id);
     res.status(200).json({ message: "Đã xóa sản phẩm", result });
   } catch (err) {
     console.error("❌ Lỗi khi xóa sản phẩm:", err);
-    res.status(500).json({ message: "Lỗi server khi xóa sản phẩm" });
+    res
+      .status(err.status || 500)
+      .json({ message: err.message || "Lỗi server khi xóa sản phẩm" });
   }
 };

@@ -1,62 +1,67 @@
 import express from "express";
-import { login, verifyToken } from "../controllers/auth_controller.js";
+import { refresh } from "../controllers/refreshtoken_controller.js";
+import { logout } from "../controllers/logout_controller.js"; // nếu tạo
+import {
+  checkEmail,
+  verifyOtp,
+  resendOtp,
+} from "../controllers/registration_controller.js";
+import {
+  checkEmail as forgotCheckEmail,
+  verifyOtp as forgotVerifyOtp,
+  resetPassword,
+} from "../controllers/forgot_password.controller.js";
 
 const router = express.Router();
-
 /**
  * @swagger
  * tags:
- *   name: Authentication
- *   description: API xác thực người dùng
+ *   name: Auth
+ *   description: API quản lý token (refresh) và đăng xuất
  */
 
 /**
  * @swagger
- * /auth/login:
+ * /auth/refresh:
  *   post:
- *     summary: Đăng nhập tài khoản nhân viên
- *     tags: [Authentication]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               username:
- *                 type: string
- *                 example: manager_nhan
- *               password:
- *                 type: string
- *                 example: "123"
+ *     summary: Làm mới access token bằng refresh token (lưu trong cookie HttpOnly)
+ *     tags: [Auth]
  *     responses:
  *       200:
- *         description: Đăng nhập thành công
- *       400:
- *         description: Thiếu username hoặc password
+ *         description: Trả về access token mới
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 accessToken:
+ *                   type: string
  *       401:
- *         description: Sai mật khẩu
- *       403:
- *         description: Tài khoản bị khóa
+ *         description: Refresh token không hợp lệ hoặc đã bị thu hồi
  */
-router.post("/login", login);
+router.post("/refresh", refresh);
 
 /**
  * @swagger
- * /auth/verify:
- *   get:
- *     summary: Kiểm tra token hợp lệ
- *     tags: [Authentication]
- *     security:
- *       - bearerAuth: []
+ * /auth/logout:
+ *   post:
+ *     summary: Đăng xuất và thu hồi refresh token
+ *     tags: [Auth]
  *     responses:
  *       200:
- *         description: Token hợp lệ
- *       401:
- *         description: Thiếu hoặc token không hợp lệ
- *       403:
- *         description: Token hết hạn
+ *         description: Đăng xuất thành công, cookie đã bị xoá
+ *       400:
+ *         description: Yêu cầu không hợp lệ hoặc token không tồn tại
  */
-router.get("/verify", verifyToken);
-
+router.post("/logout", logout);
+// Registration / OTP flows
+router.post("/check-email", checkEmail);
+router.post("/verify-otp", verifyOtp);
+router.post("/resend-otp", resendOtp);
+// Forgot password flows
+router.post("/forgot-password/check-email", forgotCheckEmail);
+router.post("/forgot-password/verify-otp", forgotVerifyOtp);
+router.post("/reset-password", resetPassword);
 export default router;

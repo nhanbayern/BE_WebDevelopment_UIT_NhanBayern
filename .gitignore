@@ -23,3 +23,7 @@ build/
 
 #services
 services.txt
+#GoogleAuthorizationAndAuthentication 
+client_secret.json
+
+test.js

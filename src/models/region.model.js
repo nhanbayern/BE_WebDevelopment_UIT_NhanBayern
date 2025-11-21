@@ -1,4 +1,32 @@
 import db from "../config/db.js";
+// src/models/region.model.js
+import { DataTypes } from "sequelize";
+import sequelize from "../config/db.js";
+
+const Region = sequelize.define(
+  "Region",
+  {
+    specialty_id: {
+      type: DataTypes.STRING(10),
+      primaryKey: true,
+      allowNull: false,
+    },
+    province_name: {
+      type: DataTypes.STRING(100),
+      allowNull: false,
+    },
+    description: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+  },
+  {
+    tableName: "specialties",
+    timestamps: false,
+  }
+);
+
+export default Region;
 
 /**
  * 🗺️ Lấy danh sách tất cả các vùng (specialties)
@@ -11,7 +39,7 @@ export async function getAllRegions() {
 }
 
 /**
- * 🏕️ Lấy thông tin chi tiết 1 vùng theo ID
+ *  Lấy thông tin chi tiết 1 vùng theo ID
  * @param {string} id - Mã vùng (specialty_id)
  */
 export async function getRegionById(id) {

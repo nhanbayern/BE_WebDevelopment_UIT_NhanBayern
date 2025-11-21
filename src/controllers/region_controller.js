@@ -1,4 +1,4 @@
-import * as Region from "../models/region.js";
+import * as Region from "../services/region.service.js";
 // gom toàn bộ vào object region
 
 /**
