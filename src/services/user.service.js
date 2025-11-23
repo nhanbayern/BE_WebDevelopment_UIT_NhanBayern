@@ -51,16 +51,10 @@ export const getAllUsers = async () => {
   return await Customer.findAll({ order: [["created_at", "DESC"]] });
 };
 
-/**
- * ✅ Lấy khách hàng theo ID
- */
 export const getUserById = async (user_id) => {
   return await Customer.findByPk(user_id);
 };
 
-/**
- * ✅ Cập nhật địa chỉ khách hàng
- */
 export const updateUserAddress = async (user_id, newAddress) => {
   const user = await Customer.findByPk(user_id);
   if (!user) throw new Error("Không tìm thấy khách hàng");
@@ -69,4 +63,3 @@ export const updateUserAddress = async (user_id, newAddress) => {
   await user.save();
   return user;
 };
-

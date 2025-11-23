@@ -5,25 +5,46 @@ import cookieParser from "cookie-parser";
 // passport configuration
 import passport from "./src/config/passport.js";
 import productRoutes from "./src/routes/productRoutes.js";
-import regionRoutes from "./src/routes/regionRoutes.js"; // 👈 mới thêm
 // Đảm bảo chỉ import customerAuthRoutes, xoá các dòng liên quan đến authRoutes nếu có
 import customerAuthRoutes from "./src/routes/customerAuthRoutes.js";
 import authRoutes from "./src/routes/authRoutes.js";
+import userRoutes from "./src/routes/userRoutes.js";
 //  Import swagger config
 import setupSwagger from "./apidoc/swagger-apidoc.js";
+// Import token cleanup scheduler
+import { startTokenCleanupScheduler } from "./src/utils/token_cleanup.js";
 
 dotenv.config();
 
 const app = express();
+// If running behind a reverse proxy in production, enable trust proxy so
+// secure cookies and req.ip behave correctly.
+if (process.env.NODE_ENV === "production") {
+  app.set("trust proxy", 1);
+}
 // Middleware setup
 // CORS: cho phép cookie (credentials) từ frontend origin cấu hình
 // Trim trailing slash if user set FRONTEND_ORIGIN with a slash (causes CORS mismatch)
 const FRONTEND_ORIGIN = (
   process.env.FRONTEND_ORIGIN || "http://localhost:3000"
 ).replace(/\/$/, "");
+
+// Allow the configured origin, and also common dev origins (Vite default 5174).
+// Use a function to echo the incoming origin when it matches allowed patterns
+// This is helpful in dev when the browser origin may be http://localhost:5174
+// and requests are proxied by Vite to the backend.
+const allowedDevOrigins = ["http://localhost:5174", "http://localhost:3000"];
 app.use(
   cors({
-    origin: FRONTEND_ORIGIN,
+    origin: function (origin, callback) {
+      // If no origin (e.g. curl / same-origin server-side) allow it
+      if (!origin) return callback(null, true);
+      if (origin === FRONTEND_ORIGIN || allowedDevOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      // unknown origin: deny
+      return callback(new Error("Not allowed by CORS"), false);
+    },
     credentials: true,
   })
 );
@@ -45,9 +66,22 @@ app.use(passport.initialize());
 // Swagger setup
 setupSwagger(app);
 
+// Debug endpoint to check cookies (dev only)
+if (process.env.NODE_ENV !== "production") {
+  app.get("/debug/cookies", (req, res) => {
+    res.json({
+      cookies: req.cookies,
+      headers: {
+        cookie: req.headers.cookie,
+        origin: req.headers.origin,
+        userAgent: req.headers["user-agent"],
+      },
+    });
+  });
+}
+
 // Routes setup
 app.use("/RuouOngTu/products", productRoutes);
-app.use("/RuouOngTu/regions", regionRoutes); // dòng này để bật route region/products
 // Mount customer routes under the RuouOngTu base (canonical)
 app.use("/RuouOngTu/api/customer", customerAuthRoutes);
 // Backwards-compatible mount: accept routes without the 'api' segment
@@ -58,6 +92,10 @@ app.use("/RuouOngTu/customer", customerAuthRoutes);
 app.use("/RuouOngTu/auth", customerAuthRoutes);
 // Mount auth-specific routes (refresh, logout)
 app.use("/RuouOngTu/auth", authRoutes);
+// User profile & address management
+app.use("/RuouOngTu/api/user", userRoutes);
+// Backwards-compatible mount so callers using /RuouOngTu/user/* still work
+app.use("/RuouOngTu/user", userRoutes);
 // Server listen
 // NOTE: CORS and cookieParser already configured above. No duplicate middleware here.
 const PORT = process.env.PORT || 3000;
@@ -67,4 +105,7 @@ app.listen(PORT, () => {
   console.log(
     ` Hãy truy cập link sau để test API http://localhost:3000/ruouOngTu`
   );
+
+  // Start token cleanup scheduler
+  startTokenCleanupScheduler();
 });

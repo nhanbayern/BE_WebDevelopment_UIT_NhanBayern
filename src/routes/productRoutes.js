@@ -2,6 +2,7 @@ import express from "express";
 import {
   getAllProductsController,
   getProductByIdController,
+  getProductsByRegionController,
   createProductController,
   updateProductController,
   deleteProductController,
@@ -27,6 +28,25 @@ const router = express.Router();
  *         description: Thành công — Trả về danh sách sản phẩm
  */
 router.get("/", getAllProductsController);
+
+/**
+ * @swagger
+ * /products/region/{regionName}:
+ *   get:
+ *     summary: Lấy danh sách sản phẩm theo region
+ *     tags: [Products]
+ *     parameters:
+ *       - in: path
+ *         name: regionName
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Tên region (trùng với cột `region` trong view)
+ *     responses:
+ *       200:
+ *         description: Danh sách sản phẩm thuộc region
+ */
+router.get("/region/:regionName", getProductsByRegionController);
 
 /**
  * @swagger

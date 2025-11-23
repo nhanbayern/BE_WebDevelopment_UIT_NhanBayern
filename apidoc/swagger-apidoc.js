@@ -49,12 +49,8 @@ const swaggerOptions = {
     },
   ],
 
-  apis: [
-    "./src/routes/productRoutes.js",
-    "./src/routes/regionRoutes.js",
-    "./src/routes/authRoutes.js",
-    "./src/routes/customerAuthRoutes.js",
-  ],
+  // Document all route files so new endpoints are automatically included
+  apis: ["./src/routes/*.js"],
 };
 
 const swaggerSpec = swaggerJSDoc(swaggerOptions);

@@ -9,11 +9,9 @@ export const getAllProductsController = async (req, res) => {
     res.status(200).json(products);
   } catch (err) {
     console.error("❌ Lỗi khi lấy danh sách sản phẩm:", err);
-    res
-      .status(err.status || 500)
-      .json({
-        message: err.message || "Lỗi server khi lấy danh sách sản phẩm",
-      });
+    res.status(err.status || 500).json({
+      message: err.message || "Lỗi server khi lấy danh sách sản phẩm",
+    });
   }
 };
 
@@ -29,6 +27,24 @@ export const getProductByIdController = async (req, res) => {
     res
       .status(err.status || 500)
       .json({ message: err.message || "Lỗi server khi lấy sản phẩm" });
+  }
+};
+
+/**
+ * Lấy danh sách sản phẩm theo region
+ */
+export const getProductsByRegionController = async (req, res) => {
+  try {
+    const { regionName } = req.params;
+    const products = await ProductService.getProductsByRegion(regionName);
+    res.status(200).json(products);
+  } catch (err) {
+    console.error("❌ Lỗi khi lấy sản phẩm theo region:", err);
+    res
+      .status(err.status || 500)
+      .json({
+        message: err.message || "Lỗi server khi lấy sản phẩm theo region",
+      });
   }
 };
 

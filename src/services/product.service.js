@@ -2,11 +2,12 @@
 // 💼 Service xử lý nghiệp vụ cho đối tượng Product (sản phẩm)
 
 import Product from "../models/product.model.js";
+import sequelize from "../config/db.js";
 
 /**
  * 📦 Lấy danh sách tất cả sản phẩm (có phân trang)
  */
-export async function getAllProducts({ page = 1, limit = 20 } = {}) {
+export async function getAllProducts({ page = 1, limit = 10 } = {}) {
   // ✅ Validate đầu vào
   if (isNaN(page) || isNaN(limit) || page <= 0 || limit <= 0) {
     const error = new Error("Tham số phân trang không hợp lệ");
@@ -16,19 +17,24 @@ export async function getAllProducts({ page = 1, limit = 20 } = {}) {
 
   const offset = (page - 1) * limit;
 
-  // ✅ Query DB
-  const { count, rows } = await Product.findAndCountAll({
-    limit,
-    offset,
-    order: [["product_id", "ASC"]],
-  });
+  // Use view_products for READ operations
+  const [countResult] = await sequelize.query(
+    `SELECT COUNT(*) as count FROM view_products`
+  );
+  const totalItems = parseInt(countResult[0].count || 0, 10);
 
-  // ✅ Trả về cấu trúc RESTful chuẩn
+  const [rows] = await sequelize.query(
+    `SELECT * FROM view_products ORDER BY id ASC LIMIT ? OFFSET ?`,
+    {
+      replacements: [parseInt(limit, 10), parseInt(offset, 10)],
+    }
+  );
+
   return {
     page,
     limit,
-    totalItems: count,
-    totalPages: Math.ceil(count / limit),
+    totalItems,
+    totalPages: Math.ceil(totalItems / limit),
     products: rows,
   };
 }
@@ -42,9 +48,13 @@ export async function getProductById(id) {
     error.status = 400;
     throw error;
   }
+  // Read from view_products
+  const [rows] = await sequelize.query(
+    `SELECT * FROM view_products WHERE id = ? LIMIT 1`,
+    { replacements: [id] }
+  );
 
-  const product = await Product.findByPk(id);
-
+  const product = rows[0] || null;
   if (!product) {
     const error = new Error("Product not found");
     error.status = 404;
@@ -52,6 +62,31 @@ export async function getProductById(id) {
   }
 
   return product;
+}
+
+/**
+ * Lấy sản phẩm theo region (sử dụng column `region` từ view)
+ */
+export async function getProductsByRegion(
+  region,
+  { page = 1, limit = 10 } = {}
+) {
+  if (!region) {
+    const error = new Error("Thiếu region");
+    error.status = 400;
+    throw error;
+  }
+
+  const offset = (page - 1) * limit;
+
+  const [rows] = await sequelize.query(
+    `SELECT * FROM view_products WHERE region = ? ORDER BY id ASC LIMIT ? OFFSET ?`,
+    {
+      replacements: [region, parseInt(limit, 10), parseInt(offset, 10)],
+    }
+  );
+
+  return rows;
 }
 
 /**

@@ -55,14 +55,25 @@ export async function onLoginSuccess(
     console.error("Failed to write login log in onLoginSuccess:", err);
   }
 
-  // set cookie HttpOnly
+  // set cookie HttpOnly. Use SameSite=None to allow cross-origin requests from the frontend (dev runs on different port).
+  // secure is enabled in production only (requires HTTPS).
+  // In development use SameSite='lax' so browsers don't require Secure flag.
+  // In production use SameSite='none' and secure=true so cross-site cookies work over HTTPS.
+  const isProd = process.env.NODE_ENV === "production";
+  const sameSite = isProd ? "none" : "lax";
+  const secure = isProd;
   res.cookie("refreshToken", refreshToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "Lax",
+    secure,
+    sameSite,
     path: "/",
     maxAge: refreshMaxAge,
   });
+
+  // Debug log for cookie attributes (helps diagnose browser acceptance)
+  console.log(
+    `[COOKIE DEBUG] set refreshToken cookie: sameSite=${sameSite}, secure=${secure}, maxAge=${refreshMaxAge}`
+  );
 
   return { accessToken, user, session_id };
 }
