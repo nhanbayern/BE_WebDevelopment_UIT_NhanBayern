@@ -42,4 +42,6 @@ const Customer = sequelize.define(
     timestamps: false, // vì bạn đã có created_at
   }
 );
+
+// Associations will be defined in a separate associations file to avoid circular imports
 export default Customer;
