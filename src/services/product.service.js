@@ -5,9 +5,14 @@ import Product from "../models/product.model.js";
 import sequelize from "../config/db.js";
 
 /**
- * 📦 Lấy danh sách tất cả sản phẩm (có phân trang)
+ * 📦 Lấy danh sách tất cả sản phẩm (có phân trang, tìm kiếm, và lọc)
  */
-export async function getAllProducts({ page = 1, limit = 10 } = {}) {
+export async function getAllProducts({
+  page = 1,
+  limit = 10,
+  keyword,
+  category,
+} = {}) {
   // ✅ Validate đầu vào
   if (isNaN(page) || isNaN(limit) || page <= 0 || limit <= 0) {
     const error = new Error("Tham số phân trang không hợp lệ");
@@ -17,16 +22,35 @@ export async function getAllProducts({ page = 1, limit = 10 } = {}) {
 
   const offset = (page - 1) * limit;
 
+  // Build WHERE clause for filtering
+  let whereClause = "";
+  const replacements = [];
+
+  if (keyword) {
+    whereClause += " WHERE name LIKE ?";
+    replacements.push(`%${keyword}%`);
+  }
+
+  if (category) {
+    whereClause += whereClause ? " AND category = ?" : " WHERE category = ?";
+    replacements.push(category);
+  }
+
   // Use view_products for READ operations
   const [countResult] = await sequelize.query(
-    `SELECT COUNT(*) as count FROM view_products`
+    `SELECT COUNT(*) as count FROM view_products${whereClause}`,
+    { replacements: [...replacements] }
   );
   const totalItems = parseInt(countResult[0].count || 0, 10);
 
   const [rows] = await sequelize.query(
-    `SELECT * FROM view_products ORDER BY id ASC LIMIT ? OFFSET ?`,
+    `SELECT * FROM view_products${whereClause} ORDER BY id ASC LIMIT ? OFFSET ?`,
     {
-      replacements: [parseInt(limit, 10), parseInt(offset, 10)],
+      replacements: [
+        ...replacements,
+        parseInt(limit, 10),
+        parseInt(offset, 10),
+      ],
     }
   );
 
@@ -87,100 +111,4 @@ export async function getProductsByRegion(
   );
 
   return rows;
-}
-
-/**
- * 🆕 Tạo mới sản phẩm
- */
-export async function createProduct(data) {
-  // ✅ Kiểm tra dữ liệu bắt buộc
-  const requiredFields = [
-    "product_name",
-    "cost_price",
-    "sale_price",
-    "manufacturer_id",
-    "specialty_id",
-  ];
-  for (const field of requiredFields) {
-    if (!data[field]) {
-      const error = new Error(`Thiếu trường bắt buộc: ${field}`);
-      error.status = 400;
-      throw error;
-    }
-  }
-
-  // ✅ Kiểm tra giá bán ≥ giá nhập
-  if (parseFloat(data.sale_price) < parseFloat(data.cost_price)) {
-    const error = new Error("Giá bán không được nhỏ hơn giá nhập");
-    error.status = 400;
-    throw error;
-  }
-
-  // ✅ Kiểm tra trùng tên sản phẩm
-  const existing = await Product.findOne({
-    where: { product_name: data.product_name },
-  });
-  if (existing) {
-    const error = new Error("Tên sản phẩm đã tồn tại");
-    error.status = 409;
-    throw error;
-  }
-
-  // ✅ Tạo sản phẩm mới
-  const newProduct = await Product.create(data);
-  return newProduct;
-}
-
-/**
- * ✏️ Cập nhật sản phẩm
- */
-export async function updateProduct(id, data) {
-  if (!id) {
-    const error = new Error("Thiếu product_id để cập nhật");
-    error.status = 400;
-    throw error;
-  }
-
-  const product = await Product.findByPk(id);
-  if (!product) {
-    const error = new Error("Product not found");
-    error.status = 404;
-    throw error;
-  }
-
-  // ✅ Nếu có thay đổi giá, kiểm tra logic giá bán ≥ giá nhập
-  if (
-    data.cost_price &&
-    data.sale_price &&
-    parseFloat(data.sale_price) < parseFloat(data.cost_price)
-  ) {
-    const error = new Error("Giá bán không được nhỏ hơn giá nhập");
-    error.status = 400;
-    throw error;
-  }
-
-  // ✅ Cập nhật sản phẩm
-  await product.update(data);
-  return product;
-}
-
-/**
- * 🗑️ Xóa sản phẩm
- */
-export async function deleteProduct(id) {
-  if (!id) {
-    const error = new Error("Thiếu product_id để xóa");
-    error.status = 400;
-    throw error;
-  }
-
-  const product = await Product.findByPk(id);
-  if (!product) {
-    const error = new Error("Product not found");
-    error.status = 404;
-    throw error;
-  }
-
-  await product.destroy();
-  return { success: true };
 }

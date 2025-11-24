@@ -3,9 +3,6 @@ import {
   getAllProductsController,
   getProductByIdController,
   getProductsByRegionController,
-  createProductController,
-  updateProductController,
-  deleteProductController,
 } from "../controllers/product_controller.js";
 
 const router = express.Router();
@@ -21,11 +18,55 @@ const router = express.Router();
  * @swagger
  * /products:
  *   get:
- *     summary: Lấy danh sách tất cả sản phẩm
+ *     summary: Lấy danh sách tất cả sản phẩm (có phân trang, tìm kiếm, và lọc)
  *     tags: [Products]
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Số trang (bắt đầu từ 1)
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Số lượng sản phẩm trên mỗi trang
+ *       - in: query
+ *         name: q
+ *         schema:
+ *           type: string
+ *         description: Từ khóa tìm kiếm theo tên sản phẩm (LIKE %keyword%)
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *         description: Lọc theo danh mục sản phẩm
  *     responses:
  *       200:
- *         description: Thành công — Trả về danh sách sản phẩm
+ *         description: Thành công — Trả về danh sách sản phẩm có phân trang
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 page:
+ *                   type: integer
+ *                   example: 1
+ *                 limit:
+ *                   type: integer
+ *                   example: 10
+ *                 totalItems:
+ *                   type: integer
+ *                   example: 50
+ *                 totalPages:
+ *                   type: integer
+ *                   example: 5
+ *                 products:
+ *                   type: array
+ *                   items:
+ *                     type: object
  */
 router.get("/", getAllProductsController);
 
@@ -68,93 +109,5 @@ router.get("/region/:regionName", getProductsByRegionController);
  *         description: Không tìm thấy sản phẩm
  */
 router.get("/:id", getProductByIdController);
-
-/**
- * @swagger
- * /products:
- *   post:
- *     summary: Thêm sản phẩm mới
- *     tags: [Products]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - product_name
- *               - price
- *             properties:
- *               product_name:
- *                 type: string
- *                 example: "Rượu Bàu Đá Đặc Biệt"
- *               price:
- *                 type: number
- *                 example: 150000
- *               description:
- *                 type: string
- *                 example: "Rượu truyền thống Bàu Đá hảo hạng"
- *     responses:
- *       201:
- *         description: Đã thêm sản phẩm mới thành công
- *       500:
- *         description: Lỗi khi thêm sản phẩm
- */
-router.post("/", createProductController);
-
-/**
- * @swagger
- * /products/{id}:
- *   put:
- *     summary: Cập nhật thông tin sản phẩm
- *     tags: [Products]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: ID sản phẩm cần cập nhật
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               product_name:
- *                 type: string
- *                 example: "Rượu Bàu Đá Premium"
- *               price:
- *                 type: number
- *                 example: 180000
- *     responses:
- *       200:
- *         description: Cập nhật thành công
- *       404:
- *         description: Không tìm thấy sản phẩm
- */
-router.put("/:id", updateProductController);
-
-/**
- * @swagger
- * /products/{id}:
- *   delete:
- *     summary: Xóa sản phẩm theo ID
- *     tags: [Products]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: ID sản phẩm cần xóa
- *     responses:
- *       200:
- *         description: Xóa thành công
- *       404:
- *         description: Không tìm thấy sản phẩm
- */
-router.delete("/:id", deleteProductController);
 
 export default router;
