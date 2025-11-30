@@ -32,10 +32,24 @@ export const findOrCreateByGoogle = async ({
   google_id,
   address = null,
 }) => {
+  const whereClauses = [];
+  if (email) whereClauses.push({ email });
+  if (google_id) whereClauses.push({ google_id });
+  if (whereClauses.length === 0) {
+    throw new Error("Email hoặc Google ID là bắt buộc");
+  }
+
   const existing = await Customer.findOne({
-    where: { [Op.or]: [{ email }, { google_id }] },
+    where: { [Op.or]: whereClauses },
   });
-  if (existing) return existing;
+
+  if (existing) {
+    if (!existing.google_id && google_id) {
+      existing.google_id = google_id;
+      await existing.save();
+    }
+    return existing;
+  }
 
   const user_id = await generateNextUserId();
   const newUser = await Customer.create({

@@ -83,7 +83,7 @@ CREATE TABLE IF NOT EXISTS `backend`.`emailotp` (
   INDEX `idx_email_otp_email` (`email` ASC) VISIBLE,
   INDEX `idx_email_otp_ip` (`ip_address` ASC) VISIBLE)
 ENGINE = InnoDB
-AUTO_INCREMENT = 7
+AUTO_INCREMENT = 9
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -107,7 +107,7 @@ CREATE TABLE IF NOT EXISTS `backend`.`login_logs` (
   INDEX `account_id` (`account_id` ASC) VISIBLE,
   INDEX `idx_session_id` (`session_id` ASC) VISIBLE)
 ENGINE = InnoDB
-AUTO_INCREMENT = 60
+AUTO_INCREMENT = 134
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -155,45 +155,31 @@ COLLATE = utf8mb4_unicode_ci;
 
 
 -- -----------------------------------------------------
--- Table `backend`.`specialties`
--- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `backend`.`specialties` (
-  `specialty_id` VARCHAR(10) NOT NULL,
-  `province_name` VARCHAR(100) NOT NULL,
-  `description` TEXT NULL DEFAULT NULL,
-  PRIMARY KEY (`specialty_id`))
-ENGINE = InnoDB
-DEFAULT CHARACTER SET = utf8mb4
-COLLATE = utf8mb4_unicode_ci;
-
-
--- -----------------------------------------------------
 -- Table `backend`.`products`
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `backend`.`products` (
   `product_id` VARCHAR(10) NOT NULL,
   `product_name` VARCHAR(255) NOT NULL,
+  `image` VARCHAR(255) NULL DEFAULT NULL,
   `alcohol_content` DECIMAL(4,2) NOT NULL,
   `volume_ml` INT NOT NULL,
   `packaging_spec` VARCHAR(100) NULL DEFAULT NULL,
   `description` TEXT NULL DEFAULT NULL,
+  `long_description` TEXT NULL DEFAULT NULL,
+  `origin` VARCHAR(100) NULL DEFAULT 'Việt Nam',
   `cost_price` DECIMAL(12,2) NOT NULL,
   `sale_price` DECIMAL(12,2) NOT NULL,
+  `stock` INT NULL DEFAULT '0',
+  `category` VARCHAR(100) NULL DEFAULT NULL,
+  `region` VARCHAR(100) NULL DEFAULT NULL,
   `manufacturer_id` VARCHAR(10) NOT NULL,
-  `specialty_id` VARCHAR(10) NOT NULL,
   `created_at` DATETIME NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` DATETIME NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`product_id`),
-  INDEX `fk_products_specialty` (`specialty_id` ASC) VISIBLE,
-  INDEX `fk_manufacturer` (`manufacturer_id` ASC) VISIBLE,
-  CONSTRAINT `fk_manufacturer`
+  INDEX `fk_products_manufacturer` (`manufacturer_id` ASC) VISIBLE,
+  CONSTRAINT `fk_products_manufacturer`
     FOREIGN KEY (`manufacturer_id`)
     REFERENCES `backend`.`manufacturers` (`manufacturer_id`)
-    ON DELETE RESTRICT
-    ON UPDATE CASCADE,
-  CONSTRAINT `fk_products_specialty`
-    FOREIGN KEY (`specialty_id`)
-    REFERENCES `backend`.`specialties` (`specialty_id`)
     ON DELETE RESTRICT
     ON UPDATE CASCADE)
 ENGINE = InnoDB
@@ -249,28 +235,6 @@ COLLATE = utf8mb4_unicode_ci;
 
 
 -- -----------------------------------------------------
--- Table `backend`.`product_images`
--- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `backend`.`product_images` (
-  `image_id` INT NOT NULL AUTO_INCREMENT,
-  `product_id` VARCHAR(10) NULL DEFAULT NULL,
-  `image_url` VARCHAR(255) NOT NULL,
-  `is_primary` TINYINT(1) NULL DEFAULT '0',
-  `uploaded_at` DATETIME NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`image_id`),
-  INDEX `fk_product_images_product` (`product_id` ASC) VISIBLE,
-  CONSTRAINT `fk_product_images_product`
-    FOREIGN KEY (`product_id`)
-    REFERENCES `backend`.`products` (`product_id`)
-    ON DELETE CASCADE
-    ON UPDATE CASCADE)
-ENGINE = InnoDB
-AUTO_INCREMENT = 13
-DEFAULT CHARACTER SET = utf8mb4
-COLLATE = utf8mb4_unicode_ci;
-
-
--- -----------------------------------------------------
 -- Table `backend`.`refresh_tokens`
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `backend`.`refresh_tokens` (
@@ -289,26 +253,7 @@ CREATE TABLE IF NOT EXISTS `backend`.`refresh_tokens` (
   INDEX `idx_token_hash` (`token_hash` ASC) VISIBLE,
   INDEX `idx_user_id` (`user_id` ASC) VISIBLE)
 ENGINE = InnoDB
-AUTO_INCREMENT = 49
-DEFAULT CHARACTER SET = utf8mb4
-COLLATE = utf8mb4_unicode_ci;
-
-
--- -----------------------------------------------------
--- Table `backend`.`shopping_cart`
--- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `backend`.`shopping_cart` (
-  `cart_id` INT NOT NULL AUTO_INCREMENT,
-  `user_id` VARCHAR(20) NOT NULL,
-  `created_at` DATETIME NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` DATETIME NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`cart_id`),
-  INDEX `user_id` (`user_id` ASC) VISIBLE,
-  CONSTRAINT `shopping_cart_ibfk_1`
-    FOREIGN KEY (`user_id`)
-    REFERENCES `backend`.`customers` (`user_id`)
-    ON DELETE CASCADE)
-ENGINE = InnoDB
+AUTO_INCREMENT = 241
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -318,20 +263,23 @@ COLLATE = utf8mb4_unicode_ci;
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `backend`.`shopping_cart_item` (
   `item_id` INT NOT NULL AUTO_INCREMENT,
-  `cart_id` INT NOT NULL,
+  `user_id` VARCHAR(20) NOT NULL,
   `product_id` VARCHAR(10) NOT NULL,
   `quantity` INT NOT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`item_id`),
-  INDEX `cart_id` (`cart_id` ASC) VISIBLE,
+  UNIQUE INDEX `unique_user_product` (`user_id` ASC, `product_id` ASC) VISIBLE,
   INDEX `product_id` (`product_id` ASC) VISIBLE,
-  CONSTRAINT `shopping_cart_item_ibfk_1`
-    FOREIGN KEY (`cart_id`)
-    REFERENCES `backend`.`shopping_cart` (`cart_id`)
+  CONSTRAINT `fk_cart_item_user`
+    FOREIGN KEY (`user_id`)
+    REFERENCES `backend`.`customers` (`user_id`)
     ON DELETE CASCADE,
   CONSTRAINT `shopping_cart_item_ibfk_2`
     FOREIGN KEY (`product_id`)
     REFERENCES `backend`.`products` (`product_id`))
 ENGINE = InnoDB
+AUTO_INCREMENT = 41
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -347,17 +295,25 @@ CREATE TABLE IF NOT EXISTS `backend`.`user_address` (
   `district` VARCHAR(50) NULL DEFAULT NULL,
   `province` VARCHAR(50) NULL DEFAULT NULL,
   `is_default` TINYINT(1) NULL DEFAULT '0',
+  `address_code` VARCHAR(64) NULL DEFAULT NULL,
   PRIMARY KEY (`address_id`),
+  UNIQUE INDEX `address_code` (`address_code` ASC) VISIBLE,
   INDEX `user_id` (`user_id` ASC) VISIBLE,
   CONSTRAINT `user_address_ibfk_1`
     FOREIGN KEY (`user_id`)
     REFERENCES `backend`.`customers` (`user_id`)
     ON DELETE CASCADE)
 ENGINE = InnoDB
+AUTO_INCREMENT = 9
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
 USE `backend` ;
+
+-- -----------------------------------------------------
+-- Placeholder table for view `backend`.`view_products`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `backend`.`view_products` (`id` INT, `name` INT, `image` INT, `price` INT, `stock` INT, `category` INT, `region` INT, `manufacturer_name` INT, `description` INT, `long_description` INT, `volume` INT, `abv` INT, `origin` INT);
 
 -- -----------------------------------------------------
 -- Placeholder table for view `backend`.`view_products_full`
@@ -365,11 +321,18 @@ USE `backend` ;
 CREATE TABLE IF NOT EXISTS `backend`.`view_products_full` (`product_id` INT, `product_name` INT, `alcohol_content` INT, `volume_ml` INT, `packaging_spec` INT, `description` INT, `cost_price` INT, `sale_price` INT, `created_at` INT, `updated_at` INT, `manufacturer_id` INT, `manufacturer_name` INT, `manufacturer_address` INT, `manufacturer_province` INT, `manufacturer_phone` INT, `manufacturer_website` INT, `specialty_id` INT, `specialty_province` INT, `specialty_description` INT, `primary_image` INT);
 
 -- -----------------------------------------------------
+-- View `backend`.`view_products`
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS `backend`.`view_products`;
+USE `backend`;
+CREATE  OR REPLACE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `backend`.`view_products` AS select `p`.`product_id` AS `id`,`p`.`product_name` AS `name`,`p`.`image` AS `image`,`p`.`sale_price` AS `price`,`p`.`stock` AS `stock`,`p`.`category` AS `category`,`p`.`region` AS `region`,`m`.`manufacturer_name` AS `manufacturer_name`,`p`.`description` AS `description`,`p`.`long_description` AS `long_description`,`p`.`volume_ml` AS `volume`,`p`.`alcohol_content` AS `abv`,`p`.`origin` AS `origin` from (`backend`.`products` `p` join `backend`.`manufacturers` `m` on((`p`.`manufacturer_id` = `m`.`manufacturer_id`)));
+
+-- -----------------------------------------------------
 -- View `backend`.`view_products_full`
 -- -----------------------------------------------------
 DROP TABLE IF EXISTS `backend`.`view_products_full`;
 USE `backend`;
-CREATE  OR REPLACE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `backend`.`view_products_full` AS select `p`.`product_id` AS `product_id`,`p`.`product_name` AS `product_name`,`p`.`alcohol_content` AS `alcohol_content`,`p`.`volume_ml` AS `volume_ml`,`p`.`packaging_spec` AS `packaging_spec`,`p`.`description` AS `description`,`p`.`cost_price` AS `cost_price`,`p`.`sale_price` AS `sale_price`,`p`.`created_at` AS `created_at`,`p`.`updated_at` AS `updated_at`,`m`.`manufacturer_id` AS `manufacturer_id`,`m`.`manufacturer_name` AS `manufacturer_name`,`m`.`address` AS `manufacturer_address`,`m`.`province` AS `manufacturer_province`,`m`.`phone` AS `manufacturer_phone`,`m`.`website` AS `manufacturer_website`,`s`.`specialty_id` AS `specialty_id`,`s`.`province_name` AS `specialty_province`,`s`.`description` AS `specialty_description`,`pi`.`image_url` AS `primary_image` from (((`backend`.`products` `p` left join `backend`.`manufacturers` `m` on((`p`.`manufacturer_id` = `m`.`manufacturer_id`))) left join `backend`.`specialties` `s` on((`p`.`specialty_id` = `s`.`specialty_id`))) left join `backend`.`product_images` `pi` on(((`p`.`product_id` = `pi`.`product_id`) and (`pi`.`is_primary` = true))));
+CREATE  OR REPLACE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `backend`.`view_products_full` AS select `backend`.`p`.`product_id` AS `product_id`,`backend`.`p`.`product_name` AS `product_name`,`backend`.`p`.`alcohol_content` AS `alcohol_content`,`backend`.`p`.`volume_ml` AS `volume_ml`,`backend`.`p`.`packaging_spec` AS `packaging_spec`,`backend`.`p`.`description` AS `description`,`backend`.`p`.`cost_price` AS `cost_price`,`backend`.`p`.`sale_price` AS `sale_price`,`backend`.`p`.`created_at` AS `created_at`,`backend`.`p`.`updated_at` AS `updated_at`,`backend`.`m`.`manufacturer_id` AS `manufacturer_id`,`backend`.`m`.`manufacturer_name` AS `manufacturer_name`,`backend`.`m`.`address` AS `manufacturer_address`,`backend`.`m`.`province` AS `manufacturer_province`,`backend`.`m`.`phone` AS `manufacturer_phone`,`backend`.`m`.`website` AS `manufacturer_website`,`backend`.`s`.`specialty_id` AS `specialty_id`,`backend`.`s`.`province_name` AS `specialty_province`,`backend`.`s`.`description` AS `specialty_description`,`backend`.`pi`.`image_url` AS `primary_image` from (((`backend`.`products` `p` left join `backend`.`manufacturers` `m` on((`backend`.`p`.`manufacturer_id` = `backend`.`m`.`manufacturer_id`))) left join `backend`.`specialties` `s` on((`backend`.`p`.`specialty_id` = `backend`.`s`.`specialty_id`))) left join `backend`.`product_images` `pi` on(((`backend`.`p`.`product_id` = `backend`.`pi`.`product_id`) and (`backend`.`pi`.`is_primary` = true))));
 USE `backend`;
 
 DELIMITER $$

@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import jwt from "jsonwebtoken";
 import RefreshToken from "../models/refresh_token.model.js";
 import sequelize from "../config/db.js";
 import { Transaction, Op } from "sequelize";
@@ -6,10 +7,45 @@ import {
   generateAccessToken,
   generateRefreshToken,
   verifyRefreshToken,
+  verifyAccessToken,
 } from "../utils/jwt.util.js";
 
 function hashToken(token) {
   return crypto.createHash("sha256").update(token).digest("hex");
+}
+
+/**
+ * Helper function to check if an access token is still valid.
+ * Returns { valid: boolean, payload?: object, reason?: string }
+ */
+function isAccessTokenValid(token) {
+  if (!token) {
+    return { valid: false, reason: "no_token" };
+  }
+
+  try {
+    const payload = verifyAccessToken(token);
+    const now = Math.floor(Date.now() / 1000);
+
+    if (payload.exp && payload.exp > now) {
+      return { valid: true, payload };
+    }
+
+    return { valid: false, reason: "expired", payload };
+  } catch (err) {
+    return { valid: false, reason: "invalid" };
+  }
+}
+
+/**
+ * Extract Bearer token from Authorization header
+ */
+function extractAccessToken(req) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return null;
+  }
+  return authHeader.substring(7);
 }
 
 export const refresh = async (req, res) => {
@@ -23,6 +59,28 @@ export const refresh = async (req, res) => {
     const payload = verifyRefreshToken(token);
     const tokenHash = hashToken(token);
     console.log(`[REFRESH DEBUG] incoming refresh token hash: ${tokenHash}`);
+
+    // Check if access token exists and is still valid
+    const accessToken = extractAccessToken(req);
+    const accessTokenCheck = isAccessTokenValid(accessToken);
+
+    console.log(`[REFRESH DEBUG] access token status:`, {
+      exists: !!accessToken,
+      valid: accessTokenCheck.valid,
+      reason: accessTokenCheck.reason,
+    });
+
+    // If access token is valid, return it without rotation
+    if (accessTokenCheck.valid) {
+      console.log(
+        "[REFRESH DEBUG] Access token still valid, no rotation needed"
+      );
+      return res.json({
+        accessToken,
+        rotated: false,
+        message: "Access token still valid",
+      });
+    }
 
     // Start transaction with row locking to prevent concurrent refreshes
     transaction = await sequelize.transaction();
@@ -46,6 +104,32 @@ export const refresh = async (req, res) => {
     if (!stored || stored.revoked) {
       await transaction.rollback();
       return res.status(403).json({ message: "Refresh token revoked/unknown" });
+    }
+
+    // Determine if we should rotate based on access token status
+    const shouldRotate = accessTokenCheck.reason === "expired";
+
+    console.log(`[REFRESH DEBUG] rotation decision:`, {
+      shouldRotate,
+      reason: accessTokenCheck.reason,
+      hasAccessToken: !!accessToken,
+    });
+
+    // If no access token (typical F5 reload), issue new access token without rotation
+    if (!accessToken || accessTokenCheck.reason === "no_token") {
+      console.log(
+        "[REFRESH DEBUG] No access token (F5 reload), issuing new access token without rotation"
+      );
+
+      await transaction.rollback();
+      transaction = null;
+
+      const newAccessToken = generateAccessToken({ user_id: payload.user_id });
+      return res.json({
+        accessToken: newAccessToken,
+        rotated: false,
+        message: "Access token issued without rotation",
+      });
     }
 
     // Check if token was recently used (within grace period)
@@ -79,10 +163,33 @@ export const refresh = async (req, res) => {
         transaction = null;
 
         // Return access token without rotating refresh token
-        const accessToken = generateAccessToken({ user_id: payload.user_id });
-        return res.json({ accessToken });
+        const newAccessToken = generateAccessToken({
+          user_id: payload.user_id,
+        });
+        return res.json({
+          accessToken: newAccessToken,
+          rotated: false,
+          message: "Recent refresh detected, using existing rotation",
+        });
       }
     }
+
+    // ROTATION LOGIC: Only executed if access token is expired
+    if (!shouldRotate) {
+      console.log(
+        "[REFRESH DEBUG] Skipping rotation, access token not expired"
+      );
+      await transaction.rollback();
+      transaction = null;
+
+      const newAccessToken = generateAccessToken({ user_id: payload.user_id });
+      return res.json({
+        accessToken: newAccessToken,
+        rotated: false,
+      });
+    }
+
+    console.log("[REFRESH DEBUG] Access token expired, performing rotation");
 
     // Update last_used_at but don't revoke yet (delayed revoke)
     await stored.update(
@@ -152,8 +259,12 @@ export const refresh = async (req, res) => {
       `[COOKIE DEBUG] refreshed cookie: sameSite=${sameSite}, secure=${secure}, maxAge=${refreshMaxAge}`
     );
 
-    const accessToken = generateAccessToken({ user_id: payload.user_id });
-    return res.json({ accessToken });
+    const newAccessToken = generateAccessToken({ user_id: payload.user_id });
+    return res.json({
+      accessToken: newAccessToken,
+      rotated: true,
+      message: "Refresh token rotated",
+    });
   } catch (err) {
     if (transaction) {
       await transaction.rollback();

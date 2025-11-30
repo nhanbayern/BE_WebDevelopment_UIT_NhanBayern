@@ -5,9 +5,13 @@ export const authenticateToken = (req, res, next) => {
   // lấy token từ header
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1];
-  if (!token) return res.status(401).json({ message: "Thiếu token" });
 
-  // Try common env names for the access token secret to be more robust
+  if (!token) {
+    console.error("[AuthMiddleware] No token provided in Authorization header");
+    return res.status(401).json({ message: "Thiếu token" });
+  }
+
+  // Try common env names for the access token secret
   const secretsToTry = [
     process.env.JWT_SECRET,
     process.env.ACCESS_TOKEN_SECRET,
@@ -15,28 +19,44 @@ export const authenticateToken = (req, res, next) => {
   ].filter(Boolean);
 
   if (secretsToTry.length === 0) {
-    console.error("JWT secret is not configured in environment variables");
+    console.error(
+      "[AuthMiddleware] JWT secret is not configured in environment variables"
+    );
     return res.status(500).json({ message: "Server chưa cấu hình JWT secret" });
   }
 
-  // helper to attempt verify with multiple secrets
-  const tryVerify = (i) => {
-    const secret = secretsToTry[i];
-    jwt.verify(token, secret, (err, user) => {
-      if (!err && user) {
-        req.user = user;
-        return next();
-      }
-      if (i + 1 < secretsToTry.length) return tryVerify(i + 1);
+  // Try verifying with each secret synchronously
+  let lastError = null;
+  for (const secret of secretsToTry) {
+    try {
+      const decoded = jwt.verify(token, secret);
 
-      // All attempts failed — log the error and return clearer response
-      console.error("JWT verify failed:", err);
-      if (err && err.name === "TokenExpiredError") {
-        return res.status(401).json({ message: "Token hết hạn" });
-      }
-      return res.status(403).json({ message: "Token không hợp lệ" });
-    });
-  };
+      // Successfully decoded - set user and continue
+      req.user = decoded;
+      console.log("[AuthMiddleware] Token verified successfully. User:", {
+        userId: decoded.userId,
+        username: decoded.username,
+      });
+      return next();
+    } catch (err) {
+      lastError = err;
+      // Continue to next secret if available
+      continue;
+    }
+  }
 
-  tryVerify(0);
+  // All secrets failed - return error
+  console.error(
+    "[AuthMiddleware] JWT verify failed with all secrets:",
+    lastError?.message
+  );
+
+  if (lastError && lastError.name === "TokenExpiredError") {
+    return res.status(401).json({ message: "Token hết hạn" });
+  }
+
+  return res.status(403).json({
+    message: "Token không hợp lệ",
+    error: lastError?.message,
+  });
 };

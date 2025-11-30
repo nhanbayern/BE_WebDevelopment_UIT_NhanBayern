@@ -1,8 +1,8 @@
 import bcrypt from "bcryptjs";
+import { Op } from "sequelize";
 import CustomersAccount from "../models/customers_account.model.js";
 import Customer from "../models/user.model.js";
 import LoginLog from "../models/loginlog.model.js";
-import { generateAccessToken } from "../utils/jwt.util.js";
 
 // Đăng nhập bằng email + password
 export async function loginWithPassword(email, password, ip, userAgent) {
@@ -97,109 +97,88 @@ export async function loginWithGoogle(
   ip,
   userAgent
 ) {
-  // Tìm account theo google_id
+  if (!email) {
+    return { success: false, message: "Không lấy được email từ Google" };
+  }
+
+  const lookupConditions = [];
+  if (google_id) lookupConditions.push({ google_id });
+  lookupConditions.push({ email });
+
   let account = await CustomersAccount.findOne({
-    where: { google_id, login_type: "google" },
+    where: { [Op.or]: lookupConditions },
   });
+
+  const ensureLoginLog = async (status, message = null) => {
+    try {
+      await LoginLog.create({
+        account_id: account?.account_id || null,
+        input_username: email,
+        username: username || null,
+        ip_address: ip,
+        user_agent: userAgent,
+        status,
+        error_message: message,
+      });
+    } catch (logErr) {
+      console.error("Failed to write login log:", logErr);
+    }
+  };
+
   let customer;
+
   if (account) {
-    // Nếu đã có, lấy luôn customer và trả về token (KHÔNG tạo mới bất cứ bản ghi nào)
     customer = await Customer.findOne({ where: { user_id: account.user_id } });
     if (!customer) {
-      try {
-        await LoginLog.create({
-          account_id: account.account_id,
-          input_username: email,
-          username: account.user_id,
-          ip_address: ip,
-          user_agent: userAgent,
-          status: "failed",
-          error_message: "Không tìm thấy profile Customer",
-        });
-      } catch (err) {
-        console.error("Failed to write login log:", err);
-      }
+      await ensureLoginLog("failed", "Không tìm thấy profile Customer");
       return { success: false, message: "Không tìm thấy profile Customer" };
     }
+
+    if (!account.google_id && google_id) {
+      account.google_id = google_id;
+      await account.save();
+    }
   } else {
-    // Nếu chưa có account với google_id, có thể đã có Customer tồn tại với cùng email
-    // (ví dụ user đã đăng ký bằng password). Trong trường hợp đó, tái sử dụng profile Customer
-    // và chỉ tạo một CustomersAccount mới liên kết tới user hiện có.
     try {
-      let existingCustomer = await Customer.findOne({ where: { email } });
-      if (existingCustomer) {
-        // Nếu đã có profile, tạo account google liên kết tới profile đó
-        customer = existingCustomer;
-        account = await CustomersAccount.create({
-          account_id: "A" + Date.now(),
-          user_id: customer.user_id,
-          login_type: "google",
-          email,
-          google_id,
-        });
-        // log success link
-        try {
-          await LoginLog.create({
-            account_id: account.account_id,
-            input_username: email,
-            username: customer.username,
-            ip_address: ip,
-            user_agent: userAgent,
-            status: "success",
-          });
-        } catch (err) {
-          console.error("Failed to write login log:", err);
+      customer = await Customer.findOne({ where: { email } });
+      if (customer) {
+        if (!customer.google_id && google_id) {
+          customer.google_id = google_id;
+          await customer.save();
         }
       } else {
-        // Tạo mới profile customer + account
-        const user_id = "U" + Date.now();
-        customer = await Customer.create({ user_id, username, email });
-        account = await CustomersAccount.create({
-          account_id: "A" + Date.now(),
+        const user_id = `U${Date.now()}${Math.floor(Math.random() * 1000)
+          .toString()
+          .padStart(3, "0")}`;
+        customer = await Customer.create({
           user_id,
-          login_type: "google",
+          username: username || email,
           email,
           google_id,
         });
-        // log success create
-        try {
-          await LoginLog.create({
-            account_id: account.account_id,
-            input_username: email,
-            username: customer.username,
-            ip_address: ip,
-            user_agent: userAgent,
-            status: "success",
-          });
-        } catch (err) {
-          console.error("Failed to write login log:", err);
-        }
       }
+
+      account = await CustomersAccount.create({
+        account_id: `A${Date.now()}${Math.floor(Math.random() * 1000)
+          .toString()
+          .padStart(3, "0")}`,
+        user_id: customer.user_id,
+        login_type: "google",
+        email,
+        google_id,
+      });
+
+      await ensureLoginLog("success");
     } catch (err) {
-      // Nếu xảy ra lỗi validate/unique constraint, trả về thông tin rõ ràng hơn
       const message =
         err && err.name === "SequelizeUniqueConstraintError"
           ? "Dữ liệu đã tồn tại (unique constraint)"
           : (err && err.message) || "Validation error";
       console.error("❌ loginWithGoogle error:", err);
-      // log failed attempt
-      try {
-        await LoginLog.create({
-          account_id: account?.account_id || null,
-          input_username: email,
-          username: username || null,
-          ip_address: ip,
-          user_agent: userAgent,
-          status: "failed",
-          error_message: message,
-        });
-      } catch (e) {
-        console.error("Failed to write login log:", e);
-      }
+      await ensureLoginLog("failed", message);
       return { success: false, message };
     }
   }
-  // return success info; actual refresh token creation and login_log will be
-  // handled by `onLoginSuccess` to ensure session_id is linked.
+
   return { success: true, user: customer, account };
 }

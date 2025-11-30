@@ -11,6 +11,12 @@ const Product = sequelize.define(
       type: DataTypes.STRING(255),
       allowNull: false,
     },
+
+    image: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+    },
+
     alcohol_content: {
       type: DataTypes.DECIMAL(4, 2),
       allowNull: false,
@@ -35,10 +41,6 @@ const Product = sequelize.define(
       allowNull: false,
     },
     manufacturer_id: {
-      type: DataTypes.STRING(10),
-      allowNull: false,
-    },
-    specialty_id: {
       type: DataTypes.STRING(10),
       allowNull: false,
     },
