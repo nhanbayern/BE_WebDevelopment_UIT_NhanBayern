@@ -15,20 +15,20 @@ export const createOrder = async (req, res) => {
       });
     }
 
-    const { items, shipping_address_id, payment_method } = req.body;
+    const {
+      items,
+      shipping_address_id,
+      shipping_address,
+      payment_method,
+      recipient_name,
+      recipient_phone,
+    } = req.body;
 
     // Input validation
     if (!items || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({
         error: "INVALID_INPUT",
         message: "Vui lòng cung cấp ít nhất 1 sản phẩm",
-      });
-    }
-
-    if (!shipping_address_id) {
-      return res.status(400).json({
-        error: "INVALID_INPUT",
-        message: "Vui lòng chọn địa chỉ giao hàng",
       });
     }
 
@@ -39,12 +39,44 @@ export const createOrder = async (req, res) => {
       });
     }
 
+    const trimmedRecipientName =
+      typeof recipient_name === "string" ? recipient_name.trim() : "";
+    const trimmedRecipientPhone =
+      typeof recipient_phone === "string" ? recipient_phone.trim() : "";
+
+    if (!trimmedRecipientName) {
+      return res.status(400).json({
+        error: "INVALID_INPUT",
+        message: "Vui lòng nhập họ tên người nhận",
+      });
+    }
+
+    if (!trimmedRecipientPhone) {
+      return res.status(400).json({
+        error: "INVALID_INPUT",
+        message: "Vui lòng nhập số điện thoại người nhận",
+      });
+    }
+
+    if (!shipping_address_id && !shipping_address) {
+      return res.status(400).json({
+        error: "INVALID_INPUT",
+        message: "Vui lòng cung cấp địa chỉ giao hàng",
+      });
+    }
+
+    const normalizedShippingAddress =
+      typeof shipping_address === "string" ? shipping_address.trim() : "";
+
     // Call service
     const result = await orderService.createOrder({
       user_id,
       items,
       shipping_address_id,
+      shipping_address: normalizedShippingAddress,
       payment_method,
+      recipient_name: trimmedRecipientName,
+      recipient_phone: trimmedRecipientPhone,
     });
 
     return res.status(201).json(result);

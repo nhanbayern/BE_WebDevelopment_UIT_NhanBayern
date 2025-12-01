@@ -40,6 +40,11 @@ const Product = sequelize.define(
       type: DataTypes.DECIMAL(12, 2),
       allowNull: false,
     },
+    stock: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+    },
     manufacturer_id: {
       type: DataTypes.STRING(10),
       allowNull: false,

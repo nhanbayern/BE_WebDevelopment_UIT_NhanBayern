@@ -13,7 +13,10 @@ export const createOrder = async ({
   user_id,
   items, // [{ product_id, quantity }]
   shipping_address_id,
+  shipping_address,
   payment_method,
+  recipient_name,
+  recipient_phone,
 }) => {
   const transaction = await sequelize.transaction();
 
@@ -26,38 +29,71 @@ export const createOrder = async ({
       };
     }
 
+    const trimmedRecipientName =
+      typeof recipient_name === "string" ? recipient_name.trim() : "";
+    const trimmedRecipientPhone =
+      typeof recipient_phone === "string" ? recipient_phone.trim() : "";
+
+    if (!trimmedRecipientName) {
+      throw {
+        code: "INVALID_INPUT",
+        message: "Vui lòng nhập họ tên người nhận",
+      };
+    }
+
+    if (!trimmedRecipientPhone) {
+      throw {
+        code: "INVALID_INPUT",
+        message: "Vui lòng nhập số điện thoại người nhận",
+      };
+    }
+
     // Check customer exists
     const customer = await Customer.findByPk(user_id, { transaction });
     if (!customer) {
       throw { code: "CUSTOMER_NOT_FOUND", message: "Khách hàng không tồn tại" };
     }
 
-    // Get shipping address - first try to find from user_address table
-    let shippingAddressStr = null;
+    // Resolve shipping address
+    const normalizedShippingText =
+      typeof shipping_address === "string" ? shipping_address.trim() : "";
+    let shippingAddressStr = normalizedShippingText || null;
 
-    if (shipping_address_id) {
+    const normalizedAddressId = Number.isFinite(Number(shipping_address_id))
+      ? Number(shipping_address_id)
+      : null;
+
+    if (!shippingAddressStr && normalizedAddressId) {
       const address = await UserAddress.findOne({
-        where: { address_id: shipping_address_id, user_id },
+        where: { address_id: normalizedAddressId, user_id },
         transaction,
       });
-      if (address) {
-        shippingAddressStr = `${address.address_line}, ${address.ward}, ${address.district}, ${address.province}`;
+
+      if (!address) {
+        throw {
+          code: "INVALID_ADDRESS",
+          message: "Địa chỉ giao hàng không hợp lệ",
+        };
       }
+
+      const parts = [
+        address.address_line,
+        address.ward,
+        address.district,
+        address.province,
+      ].filter(Boolean);
+      shippingAddressStr = parts.join(", ");
     }
 
-    // If no address found and shipping_address_id provided, try to get default
     if (!shippingAddressStr) {
-      const defaultAddress = await UserAddress.findOne({
-        where: { user_id, is_default: 1 },
-        transaction,
-      });
-      if (defaultAddress) {
-        shippingAddressStr = `${defaultAddress.address_line}, ${defaultAddress.ward}, ${defaultAddress.district}, ${defaultAddress.province}`;
-      } else {
-        // If still no address, just use a default placeholder (can be updated later)
-        shippingAddressStr = "Địa chỉ giao hàng sẽ được cập nhật";
-      }
+      throw {
+        code: "INVALID_ADDRESS",
+        message: "Vui lòng cung cấp địa chỉ giao hàng",
+      };
     }
+
+    const normalizedPaymentMethod =
+      payment_method === "OnlineBanking" ? "OnlineBanking" : "Cash";
 
     // Step 2: Check stock for all products with FOR UPDATE lock
     const productIds = items.map((item) => item.product_id);
@@ -110,8 +146,10 @@ export const createOrder = async ({
     const order = await Order.create(
       {
         customer_id: user_id,
+        recipient_name: trimmedRecipientName,
+        recipient_phone: trimmedRecipientPhone,
         shipping_address: shippingAddressStr,
-        payment_method,
+        payment_method: normalizedPaymentMethod,
         total_amount: totalAmount,
         final_amount: totalAmount,
         // order_code will be NULL, trigger will populate it

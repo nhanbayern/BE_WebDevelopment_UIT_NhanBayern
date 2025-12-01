@@ -15,7 +15,13 @@ export async function getCartItems(userId) {
         {
           model: Product,
           as: "product",
-          attributes: ["product_id", "product_name", "sale_price", "image"],
+          attributes: [
+            "product_id",
+            "product_name",
+            "sale_price",
+            "image",
+            "stock",
+          ],
         },
       ],
       order: [["created_at", "DESC"]],
@@ -29,6 +35,8 @@ export async function getCartItems(userId) {
       image: item.product?.image || "",
       price: parseFloat(item.product?.sale_price || 0),
       quantity: item.quantity,
+      stock:
+        typeof item.product?.stock === "number" ? item.product.stock : null,
       createdAt: item.created_at,
     }));
   } catch (error) {
@@ -71,7 +79,13 @@ export async function addOrUpdateCartItem(userId, productId, quantity) {
         {
           model: Product,
           as: "product",
-          attributes: ["product_id", "product_name", "sale_price", "image"],
+          attributes: [
+            "product_id",
+            "product_name",
+            "sale_price",
+            "image",
+            "stock",
+          ],
         },
       ],
     });
@@ -87,6 +101,10 @@ export async function addOrUpdateCartItem(userId, productId, quantity) {
       image: cartItem.product?.image || "",
       price: parseFloat(cartItem.product?.sale_price || 0),
       quantity: cartItem.quantity,
+      stock:
+        typeof cartItem.product?.stock === "number"
+          ? cartItem.product.stock
+          : null,
       updatedAt: cartItem.updated_at,
     };
   } catch (error) {
@@ -125,7 +143,13 @@ export async function updateCartItemQuantity(userId, productId, quantity) {
         {
           model: Product,
           as: "product",
-          attributes: ["product_id", "product_name", "sale_price", "image"],
+          attributes: [
+            "product_id",
+            "product_name",
+            "sale_price",
+            "image",
+            "stock",
+          ],
         },
       ],
     });
@@ -137,6 +161,10 @@ export async function updateCartItemQuantity(userId, productId, quantity) {
       image: updatedItem.product?.image || "",
       price: parseFloat(updatedItem.product?.sale_price || 0),
       quantity: updatedItem.quantity,
+      stock:
+        typeof updatedItem.product?.stock === "number"
+          ? updatedItem.product.stock
+          : null,
       updatedAt: updatedItem.updated_at,
     };
   } catch (error) {
@@ -193,7 +221,13 @@ export async function incrementByOne(userId, productId) {
         {
           model: Product,
           as: "product",
-          attributes: ["product_id", "product_name", "sale_price", "image"],
+          attributes: [
+            "product_id",
+            "product_name",
+            "sale_price",
+            "image",
+            "stock",
+          ],
         },
       ],
     });
@@ -205,6 +239,10 @@ export async function incrementByOne(userId, productId) {
       image: updatedItem.product?.image || "",
       price: parseFloat(updatedItem.product?.sale_price || 0),
       quantity: updatedItem.quantity,
+      stock:
+        typeof updatedItem.product?.stock === "number"
+          ? updatedItem.product.stock
+          : null,
       updatedAt: updatedItem.updated_at,
     };
   } catch (error) {
@@ -242,7 +280,13 @@ export async function decrementByOne(userId, productId) {
         {
           model: Product,
           as: "product",
-          attributes: ["product_id", "product_name", "sale_price", "image"],
+          attributes: [
+            "product_id",
+            "product_name",
+            "sale_price",
+            "image",
+            "stock",
+          ],
         },
       ],
     });
@@ -254,6 +298,10 @@ export async function decrementByOne(userId, productId) {
       image: updatedItem.product?.image || "",
       price: parseFloat(updatedItem.product?.sale_price || 0),
       quantity: updatedItem.quantity,
+      stock:
+        typeof updatedItem.product?.stock === "number"
+          ? updatedItem.product.stock
+          : null,
       updatedAt: updatedItem.updated_at,
     };
   } catch (error) {

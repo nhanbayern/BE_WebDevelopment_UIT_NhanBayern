@@ -22,8 +22,9 @@ const router = express.Router();
  *             type: object
  *             required:
  *               - items
- *               - shipping_address_id
  *               - payment_method
+ *               - recipient_name
+ *               - recipient_phone
  *             properties:
  *               items:
  *                 type: array
@@ -40,10 +41,22 @@ const router = express.Router();
  *                     quantity:
  *                       type: integer
  *                       example: 3
+ *               recipient_name:
+ *                 type: string
+ *                 description: Họ tên người nhận hiển thị trên đơn hàng
+ *                 example: "Nguyễn Văn A"
+ *               recipient_phone:
+ *                 type: string
+ *                 description: Số điện thoại liên hệ khi giao hàng
+ *                 example: "0912345678"
  *               shipping_address_id:
  *                 type: integer
- *                 description: ID địa chỉ giao hàng
+ *                 description: ID địa chỉ đã lưu của người dùng. Chỉ cần truyền một trong hai trường shipping_address_id hoặc shipping_address
  *                 example: 5
+ *               shipping_address:
+ *                 type: string
+ *                 description: Địa chỉ mới nhập tại checkout (nếu không chọn địa chỉ đã lưu)
+ *                 example: "123 Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh"
  *               payment_method:
  *                 type: string
  *                 enum: ["Cash", "OnlineBanking"]
