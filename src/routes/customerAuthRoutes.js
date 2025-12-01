@@ -13,7 +13,7 @@ const router = express.Router();
  * @swagger
  * tags:
  *   - name: Customer Authentication
- *     description: API xác thực khách hàng: đăng nhập bằng email/password hoặc Google
+ *     description: "API xác thực khách hàng: đăng nhập bằng email/password hoặc Google"
  */
 
 /**
@@ -158,3 +158,4 @@ router.get(
 );
 
 export default router;
+// thiện nhân đẹp trai

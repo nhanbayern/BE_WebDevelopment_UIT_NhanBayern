@@ -1,6 +1,24 @@
 import * as customerAuthService from "../services/customer_auth.service.js";
 import { onLoginSuccess } from "../services/login.service.js";
 
+const normalizeOrigin = (value) =>
+  value ? value.trim().replace(/\/$/, "") : null;
+
+function resolveCallbackTargetOrigin(req) {
+  const queryOrigin = normalizeOrigin(req.query.origin || req.query.stateOrigin);
+  if (queryOrigin) return queryOrigin;
+
+  const configured = [
+    process.env.REMOTE_ORIGIN,
+    process.env.FRONTEND_ORIGIN,
+    process.env.PUBLIC_ORIGIN,
+  ]
+    .map(normalizeOrigin)
+    .filter(Boolean);
+
+  return configured[0] || "*";
+}
+
 // Đăng nhập customer bằng password
 export const loginWithPassword = async (req, res) => {
   try {
@@ -49,7 +67,7 @@ export const googleLoginCallback = async (req, res) => {
     );
     if (result.success === false) {
       const payload = { success: false, message: result.message };
-      const targetOrigin = process.env.FRONTEND_ORIGIN || "*";
+      const targetOrigin = resolveCallbackTargetOrigin(req);
       // Send a tiny HTML page which will postMessage to opener and close
       return res.send(`<!doctype html><html><head><meta charset="utf-8"><title>OAuth Result</title></head><body>
         <script>
@@ -80,7 +98,7 @@ export const googleLoginCallback = async (req, res) => {
       user: onLogin.user,
       session_id: onLogin.session_id,
     };
-    const targetOrigin = process.env.FRONTEND_ORIGIN || "*";
+    const targetOrigin = resolveCallbackTargetOrigin(req);
     return res.send(`<!doctype html><html><head><meta charset="utf-8"><title>OAuth Result</title></head><body>
       <script>
         try{
@@ -96,7 +114,7 @@ export const googleLoginCallback = async (req, res) => {
   } catch (err) {
     console.error("Google callback error:", err);
     const payload = { success: false, message: err.message || "Server error" };
-    const targetOrigin = process.env.FRONTEND_ORIGIN || "*";
+    const targetOrigin = resolveCallbackTargetOrigin(req);
     return res.send(`<!doctype html><html><head><meta charset="utf-8"><title>OAuth Error</title></head><body>
       <script>
         try{

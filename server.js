@@ -1,4 +1,5 @@
 import dotenv from "dotenv";
+import os from "os";
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
@@ -20,22 +21,57 @@ import "./src/models/associations.js";
 import setupSwagger from "./apidoc/swagger-apidoc.js";
 // Import token cleanup scheduler
 import { startTokenCleanupScheduler } from "./src/utils/token_cleanup.js";
+import {
+  getCookieSecurityOptions,
+  shouldTrustProxy,
+} from "./src/utils/cookie_config.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, ".env") });
 
 const app = express();
-// If running behind a reverse proxy in production, enable trust proxy so
-// secure cookies and req.ip behave correctly.
-if (process.env.NODE_ENV === "production") {
+const isProd = process.env.NODE_ENV === "production";
+const HOST = process.env.HOST || "0.0.0.0";
+
+if (shouldTrustProxy()) {
   app.set("trust proxy", 1);
 }
-// Middleware setup
-// CORS: cho phép cookie (credentials) từ frontend origin cấu hình
-// Trim trailing slash if user set FRONTEND_ORIGIN with a slash (causes CORS mismatch)
-const FRONTEND_ORIGIN = (process.env.FRONTEND_ORIGIN || "").replace(/\/$/, "");
-const REMOTE_ORIGIN = (process.env.REMOTE_ORIGIN || "").replace(/\/$/, "");
-const allowedOrigins = [FRONTEND_ORIGIN, REMOTE_ORIGIN].filter(Boolean);
+
+function normalizeOrigin(value) {
+  if (!value) return null;
+  return value.trim().replace(/\/$/, "");
+}
+
+function collectOrigins() {
+  const originCandidates = [
+    process.env.API_PUBLIC_URL,
+    process.env.FRONTEND_ORIGIN,
+    process.env.REMOTE_ORIGIN,
+    process.env.PUBLIC_ORIGIN,
+    process.env.CORS_EXTRA_ORIGINS,
+    ensureProtocol(process.env.PUBLIC_DNS),
+    ensureProtocol(process.env.PUBLIC_IP),
+  ];
+
+  const fallbackApiOrigin = resolveApiBaseOrigin();
+  if (fallbackApiOrigin) {
+    originCandidates.push(fallbackApiOrigin);
+  }
+
+  const parsed = originCandidates
+    .filter(Boolean)
+    .flatMap((item) => item.split(","))
+    .map(normalizeOrigin)
+    .filter(Boolean);
+
+  if (!isProd) {
+    parsed.push("http://localhost:5174", "http://127.0.0.1:5174");
+  }
+
+  return Array.from(new Set(parsed));
+}
+
+const allowedOrigins = collectOrigins();
 
 // Allow the configured origin, and also common dev origins (Vite default 5174).
 // Use a function to echo the incoming origin when it matches allowed patterns
@@ -76,7 +112,9 @@ app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Express session middleware (required for Passport)
+const { sameSite: cookieSameSite, secure: cookieSecure } =
+  getCookieSecurityOptions();
+
 app.use(
   session({
     secret:
@@ -84,10 +122,10 @@ app.use(
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: process.env.NODE_ENV === "production", // HTTPS only in production
+      secure: cookieSecure,
       httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
-      sameSite: "lax",
+      maxAge: 24 * 60 * 60 * 1000,
+      sameSite: cookieSameSite,
     },
   })
 );
@@ -130,13 +168,47 @@ app.use("/RuouOngTu/orders", orderRoutes);
 // Server listen
 // NOTE: CORS and cookieParser already configured above. No duplicate middleware here.
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`✅ Server đang chạy ở cổng ${PORT}`);
-  console.log(`📘 API Docs: http://localhost:${PORT}/api-docs`);
-  console.log(
-    ` Hãy truy cập link sau để test API http://localhost:3000/ruouOngTu`
-  );
 
-  // Start token cleanup scheduler
+function ensureProtocol(value, protocol = "https") {
+  if (!value) return null;
+  return /^https?:\/\//i.test(value) ? value : `${protocol}://${value}`;
+}
+
+function resolveApiBaseOrigin() {
+  const preferred = normalizeOrigin(process.env.API_PUBLIC_URL);
+  if (preferred) return preferred;
+
+  const dnsOrigin = normalizeOrigin(ensureProtocol(process.env.PUBLIC_DNS));
+  if (dnsOrigin) return dnsOrigin;
+
+  const ipOrigin = normalizeOrigin(ensureProtocol(process.env.PUBLIC_IP));
+  if (ipOrigin) return ipOrigin;
+
+  const localHost = HOST === "0.0.0.0" ? "localhost" : HOST;
+  return `http://${localHost}:${PORT}`;
+}
+
+function logNetworkInfo() {
+  const interfaces = os.networkInterfaces();
+  const addresses = Object.values(interfaces)
+    .flat()
+    .filter((iface) => iface && !iface.internal && iface.family === "IPv4")
+    .map((iface) => iface.address);
+
+  console.log("🌐 Network Interfaces:", addresses.join(", ") || "Unknown");
+  if (process.env.PUBLIC_IP) {
+    console.log(`🌍 PUBLIC_IP: ${process.env.PUBLIC_IP}`);
+  }
+  if (process.env.PUBLIC_DNS) {
+    console.log(`🌍 PUBLIC_DNS: ${process.env.PUBLIC_DNS}`);
+  }
+}
+
+app.listen(PORT, HOST, () => {
+  console.log(`✅ Server đang chạy ở cổng ${PORT} (host ${HOST})`);
+  const apiOrigin = resolveApiBaseOrigin();
+  console.log(`🛠️  Base API: ${apiOrigin}/RuouOngTu`);
+  console.log(`📘 API Docs: ${apiOrigin}/api-docs`);
+  logNetworkInfo();
   startTokenCleanupScheduler();
 });

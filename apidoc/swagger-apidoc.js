@@ -11,8 +11,8 @@ const swaggerOptions = {
     },
     servers: [
       {
-        url: "http://localhost:3000/RuouOngTu",
-        description: "Local Server (RuouOngTu base)",
+        url: "https://api.ruouongtu.me/RuouOngTu",
+        description: "Production API (NGINX → Node.js)",
       },
     ],
     components: {

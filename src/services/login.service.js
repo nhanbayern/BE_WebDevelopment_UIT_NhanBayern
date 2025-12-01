@@ -5,6 +5,7 @@ import {
   generateAccessToken,
   generateRefreshToken,
 } from "../utils/jwt.util.js";
+import { getCookieSecurityOptions } from "../utils/cookie_config.js";
 
 function hashToken(token) {
   return crypto.createHash("sha256").update(token).digest("hex");
@@ -59,20 +60,19 @@ export async function onLoginSuccess(
   // secure is enabled in production only (requires HTTPS).
   // In development use SameSite='lax' so browsers don't require Secure flag.
   // In production use SameSite='none' and secure=true so cross-site cookies work over HTTPS.
-  const isProd = process.env.NODE_ENV === "production";
-  const sameSite = isProd ? "none" : "lax";
-  const secure = isProd;
+  const { secure, sameSite, domain } = getCookieSecurityOptions();
   res.cookie("refreshToken", refreshToken, {
     httpOnly: true,
     secure,
     sameSite,
+    domain,
     path: "/",
     maxAge: refreshMaxAge,
   });
 
   // Debug log for cookie attributes (helps diagnose browser acceptance)
   console.log(
-    `[COOKIE DEBUG] set refreshToken cookie: sameSite=${sameSite}, secure=${secure}, maxAge=${refreshMaxAge}`
+    `[COOKIE DEBUG] set refreshToken cookie: domain=${domain ?? "<dynamic>"}, sameSite=${sameSite}, secure=${secure}, maxAge=${refreshMaxAge}`
   );
 
   return { accessToken, user, session_id };

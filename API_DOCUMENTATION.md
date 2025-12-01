@@ -1,8 +1,8 @@
 # 🍷 RuouOngTu Backend API Documentation
 
-**Base URL:** `http://localhost:3000/RuouOngTu`
+**Base URL:** `https://api.ruouongtu.me/RuouOngTu`
 
-**API Documentation (Swagger):** `http://localhost:3000/api-docs`
+**API Documentation (Swagger):** `https://api.ruouongtu.me/api-docs`
 
 ---
 
@@ -1292,7 +1292,7 @@ REFRESH_TOKEN_EXPIRES_DAYS=30
 # OAuth (Google)
 GOOGLE_CLIENT_ID=your_google_client_id
 GOOGLE_CLIENT_SECRET=your_google_client_secret
-GOOGLE_CALLBACK_URL=http://localhost:3000/RuouOngTu/auth/google/callback
+GOOGLE_CALLBACK_URL=https://api.ruouongtu.me/RuouOngTu/auth/google/callback
 
 # Email Configuration
 NODE_MAILER_KEY=your_app_password
@@ -1313,7 +1313,7 @@ NODE_ENV=development
 ### Login Example
 
 ```bash
-curl -X POST http://localhost:3000/RuouOngTu/customer/login \
+curl -X POST https://api.ruouongtu.me/RuouOngTu/customer/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "phuong.nguyen@example.com",
@@ -1324,13 +1324,13 @@ curl -X POST http://localhost:3000/RuouOngTu/customer/login \
 ### Get Products with Search
 
 ```bash
-curl -X GET "http://localhost:3000/RuouOngTu/products?page=1&limit=10&q=rượu&category=miền%20bắc"
+curl -X GET "https://api.ruouongtu.me/RuouOngTu/products?page=1&limit=10&q=rượu&category=miền%20bắc"
 ```
 
 ### Add to Cart
 
 ```bash
-curl -X POST http://localhost:3000/RuouOngTu/api/user/insertitems \
+curl -X POST https://api.ruouongtu.me/RuouOngTu/api/user/insertitems \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1342,14 +1342,14 @@ curl -X POST http://localhost:3000/RuouOngTu/api/user/insertitems \
 ### Get Cart Items
 
 ```bash
-curl -X GET http://localhost:3000/RuouOngTu/api/user/cartitems \
+curl -X GET https://api.ruouongtu.me/RuouOngTu/api/user/cartitems \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
 
 ### Refresh Token
 
 ```bash
-curl -X POST http://localhost:3000/RuouOngTu/auth/refresh \
+curl -X POST https://api.ruouongtu.me/RuouOngTu/auth/refresh \
   -H "Cookie: refreshToken=YOUR_REFRESH_TOKEN"
 ```
 
@@ -1380,7 +1380,7 @@ curl -X POST http://localhost:3000/RuouOngTu/auth/refresh \
 
 ## 📞 Support & Documentation
 
-- **Swagger UI:** `http://localhost:3000/api-docs`
+- **Swagger UI:** `https://api.ruouongtu.me/api-docs`
 - **GitHub Repository:** [BE_WebDevelopment_UIT_NhanBayern](https://github.com/nhanbayern/BE_WebDevelopment_UIT_NhanBayern)
 - **Database Schema:** See `BackEnd/diagram/dbdiagram/`
 - **API Tests:** Use Postman collection (import from Swagger export)

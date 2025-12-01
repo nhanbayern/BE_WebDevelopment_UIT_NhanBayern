@@ -16,7 +16,7 @@ import { googleLoginCallback } from "../controllers/customer_auth.controller.js"
 
 const router = express.Router();
 const FRONTEND_ORIGIN = (
-  process.env.FRONTEND_ORIGIN || "http://localhost:5174"
+  process.env.FRONTEND_ORIGIN || "https://api.ruouongtu.me"
 ).replace(/\/$/, "");
 /**
  * @swagger

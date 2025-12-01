@@ -9,6 +9,7 @@ import {
   verifyRefreshToken,
   verifyAccessToken,
 } from "../utils/jwt.util.js";
+import { getCookieSecurityOptions } from "../utils/cookie_config.js";
 
 function hashToken(token) {
   return crypto.createHash("sha256").update(token).digest("hex");
@@ -243,20 +244,19 @@ export const refresh = async (req, res) => {
     }, gracePeriodMs);
 
     // Set cookie and return access token
-    const isProd = process.env.NODE_ENV === "production";
-    const sameSite = isProd ? "none" : "lax";
-    const secure = isProd;
+    const { sameSite, secure, domain } = getCookieSecurityOptions();
 
     res.cookie("refreshToken", newRefreshToken, {
       httpOnly: true,
       secure,
       sameSite,
+      domain,
       path: "/",
       maxAge: refreshMaxAge,
     });
 
     console.log(
-      `[COOKIE DEBUG] refreshed cookie: sameSite=${sameSite}, secure=${secure}, maxAge=${refreshMaxAge}`
+      `[COOKIE DEBUG] refreshed cookie: domain=${domain ?? "<dynamic>"}, sameSite=${sameSite}, secure=${secure}, maxAge=${refreshMaxAge}`
     );
 
     const newAccessToken = generateAccessToken({ user_id: payload.user_id });

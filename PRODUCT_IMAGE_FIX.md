@@ -338,13 +338,13 @@ VALUES ('P001', '/uploads/products/p001.jpg', 1);
 
 ```bash
 # Add to cart
-curl -X POST http://localhost:3000/RuouOngTu/api/user/insertitems \
+curl -X POST https://api.ruouongtu.me/RuouOngTu/api/user/insertitems \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"productId":"P001","quantity":1}'
 
 # Get cart items
-curl -X GET http://localhost:3000/RuouOngTu/api/user/cartitems \
+curl -X GET https://api.ruouongtu.me/RuouOngTu/api/user/cartitems \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
 

@@ -253,7 +253,7 @@ await sequelize.query(`
 
 ## Swagger Documentation
 
-Access API documentation at: `http://localhost:3000/api-docs`
+Access API documentation at: `https://api.ruouongtu.me/api-docs`
 
 All endpoints are documented with:
 
@@ -284,18 +284,18 @@ npm run dev
 
 ```bash
 # Login to get token
-curl -X POST http://localhost:3000/RuouOngTu/customer/login \
+curl -X POST https://api.ruouongtu.me/RuouOngTu/customer/login \
   -H "Content-Type: application/json" \
   -d '{"email":"test@example.com","password":"password123"}'
 
 # Add item to cart
-curl -X POST http://localhost:3000/RuouOngTu/user/insertitems \
+curl -X POST https://api.ruouongtu.me/RuouOngTu/user/insertitems \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <token>" \
   -d '{"productId":"p001","quantity":3}'
 
 # Get cart items
-curl -X GET http://localhost:3000/RuouOngTu/user/cartitems \
+curl -X GET https://api.ruouongtu.me/RuouOngTu/user/cartitems \
   -H "Authorization: Bearer <token>"
 ```
 
