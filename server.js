@@ -33,24 +33,25 @@ if (process.env.NODE_ENV === "production") {
 // Middleware setup
 // CORS: cho phép cookie (credentials) từ frontend origin cấu hình
 // Trim trailing slash if user set FRONTEND_ORIGIN with a slash (causes CORS mismatch)
-const FRONTEND_ORIGIN = (
-  process.env.FRONTEND_ORIGIN || "http://localhost:3000"
-).replace(/\/$/, "");
+const FRONTEND_ORIGIN = (process.env.FRONTEND_ORIGIN || "").replace(/\/$/, "");
+const REMOTE_ORIGIN = (process.env.REMOTE_ORIGIN || "").replace(/\/$/, "");
+const allowedOrigins = [FRONTEND_ORIGIN, REMOTE_ORIGIN].filter(Boolean);
 
 // Allow the configured origin, and also common dev origins (Vite default 5174).
 // Use a function to echo the incoming origin when it matches allowed patterns
 // This is helpful in dev when the browser origin may be http://localhost:5174
 // and requests are proxied by Vite to the backend.
-const allowedDevOrigins = ["http://localhost:5174", "http://localhost:3000"];
+
 app.use(
+  //cors
   cors({
     origin: function (origin, callback) {
-      // If no origin (e.g. curl / same-origin server-side) allow it
       if (!origin) return callback(null, true);
-      if (origin === FRONTEND_ORIGIN || allowedDevOrigins.includes(origin)) {
+
+      if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
-      // unknown origin: deny
+
       return callback(new Error("Not allowed by CORS"), false);
     },
     credentials: true,
@@ -61,8 +62,13 @@ app.use(
 app.use((req, res, next) => {
   const origin = req.headers.origin || "-";
   console.log(
-    `[CORS DEBUG] ${req.method} ${req.url} - request origin: ${origin} | allowed origin: ${FRONTEND_ORIGIN}`
+    `[CORS DEBUG] ${req.method} ${
+      req.url
+    } - request origin: ${origin} | allowed origins: ${allowedOrigins.join(
+      ", "
+    )}`
   );
+
   next();
 });
 // parse cookies (để đọc HttpOnly refresh token)
