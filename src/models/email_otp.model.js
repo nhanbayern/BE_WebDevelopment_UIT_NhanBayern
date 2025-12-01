@@ -40,7 +40,7 @@ const EmailOTP = sequelize.define(
     },
   },
   {
-    tableName: "EmailOTP",
+    tableName: "emailotp", // match actual MySQL table name (lowercase)
     timestamps: false,
   }
 );
