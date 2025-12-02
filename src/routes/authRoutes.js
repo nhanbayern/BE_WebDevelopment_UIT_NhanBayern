@@ -62,8 +62,134 @@ router.post("/refresh", refresh);
  */
 router.post("/logout", logout);
 // Registration / OTP flows
+/**
+ * @swagger
+ * /auth/check-email:
+ *   post:
+ *     summary: Kiểm tra email đăng ký và gửi OTP
+ *     description: Kiểm tra xem email đã tồn tại chưa và phát sinh OTP 6 số, gửi về email để xác thực trước khi tạo tài khoản.
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: "user@example.com"
+ *     responses:
+ *       200:
+ *         description: OTP đã được gửi qua email
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "OTP sent"
+ *       400:
+ *         description: Email không hợp lệ hoặc không thể gửi OTP
+ */
 router.post("/check-email", checkEmail);
+/**
+ * @swagger
+ * /auth/verify-otp:
+ *   post:
+ *     summary: Xác thực OTP và hoàn tất đăng ký
+ *     description: Nhập OTP vừa gửi qua email cùng thông tin tài khoản để tạo user mới và tự động đăng nhập.
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - otp
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: "user@example.com"
+ *               otp:
+ *                 type: string
+ *                 example: "123456"
+ *               username:
+ *                 type: string
+ *                 description: Tuỳ chọn, hệ thống sẽ tự tạo nếu bỏ trống
+ *                 example: "user123"
+ *               password:
+ *                 type: string
+ *                 format: password
+ *                 example: "Passw0rd!"
+ *               phone:
+ *                 type: string
+ *                 example: "0987654321"
+ *     responses:
+ *       200:
+ *         description: Đăng ký thành công và trả về thông tin đăng nhập
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Registered"
+ *                 accessToken:
+ *                   type: string
+ *                   description: Có mặt nếu finalizeRegistration trả về token
+ *       400:
+ *         description: OTP sai/đã hết hạn hoặc dữ liệu không hợp lệ
+ */
 router.post("/verify-otp", verifyOtp);
+/**
+ * @swagger
+ * /auth/resend-otp:
+ *   post:
+ *     summary: Gửi lại OTP đăng ký
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: "user@example.com"
+ *     responses:
+ *       200:
+ *         description: OTP mới đã được gửi
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *       400:
+ *         description: Không thể gửi lại OTP do vượt giới hạn hoặc email không hợp lệ
+ */
 router.post("/resend-otp", resendOtp);
 // Forgot password flows
 router.post("/forgot-password/check-email", forgotCheckEmail);

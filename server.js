@@ -15,6 +15,7 @@ import authRoutes from "./src/routes/authRoutes.js";
 import userRoutes from "./src/routes/userRoutes.js";
 import shoppingCartRoutes from "./src/routes/shoppingCartRoutes.js";
 import orderRoutes from "./src/routes/orderRoutes.js";
+import paymentRoutes from "./src/routes/payment.routes.js";
 // Import associations to set up model relationships
 import "./src/models/associations.js";
 //  Import swagger config
@@ -164,6 +165,9 @@ app.use("/RuouOngTu/user", shoppingCartRoutes);
 
 // Order routes
 app.use("/RuouOngTu/orders", orderRoutes);
+
+// Payment routes (VNPay) align with /RuouOngTu namespace (no /api prefix)
+app.use("/RuouOngTu/payment", paymentRoutes);
 
 // Server listen
 // NOTE: CORS and cookieParser already configured above. No duplicate middleware here.
