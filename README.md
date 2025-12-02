@@ -2,6 +2,15 @@
 
 Node.js + Express API running behind NGINX (HTTPS-only) with every endpoint mounted under `/RuouOngTu`. This document highlights the processing logic by connecting routes, controllers, services, and models.
 
+## Tech Stack
+
+- **Runtime**: Node.js 20+, Express 5, Nodemon for local dev and PM2 for live server
+- **Database**: MySQL 8 managed via Sequelize ORM and pooled connections
+- **Auth**: JWT access tokens, HttpOnly refresh cookies, Passport Google OAuth2, custom OTP via Nodemailer
+- **Payments**: MoMo `payWithMethod` 
+- **Docs & Tooling**: Swagger (apidoc), ESLint/Prettier (implicit), PM2/systemd for production process management
+- **Infra**: AWS EC2 Ubuntu + NGINX reverse proxy serving `https://api.ruouongtu.me`
+
 ## Source Layout Snapshot
 
 ```
