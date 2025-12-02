@@ -1,4 +1,4 @@
-# Ruou Ong Tu Backend
+# Rượu Ông Tư Backend
 
 Node.js + Express API running behind NGINX (HTTPS-only) with every endpoint mounted under `/RuouOngTu`. This document highlights the processing logic by connecting routes, controllers, services, and models.
 
@@ -106,6 +106,4 @@ Starts payment sessions, processes provider callbacks, and reconciles order/paym
 4. Swagger UI lives at `/api-docs`; definitions come from `apidoc/swagger-apidoc.js`.
  add Sequelize migrations before deploying schema changes.
 
----
 
-Maintained by the Ruou Ông Tư backend team. For infra changes or credentials, contact @nhanbayern.
