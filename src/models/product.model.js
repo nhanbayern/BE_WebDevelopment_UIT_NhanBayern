@@ -1,5 +1,11 @@
 import sequelize from "../config/db.js";
 import { Sequelize, DataTypes } from "sequelize";
+
+/**
+ * Product model - UPDATED to match new schema
+ * Added: category, region, origin, long_description fields
+ * manufacturer_id now references the new manufacturers table
+ */
 const Product = sequelize.define(
   "Product",
   {
@@ -11,12 +17,10 @@ const Product = sequelize.define(
       type: DataTypes.STRING(255),
       allowNull: false,
     },
-
     image: {
       type: DataTypes.STRING(255),
       allowNull: true,
     },
-
     alcohol_content: {
       type: DataTypes.DECIMAL(4, 2),
       allowNull: false,
@@ -31,6 +35,18 @@ const Product = sequelize.define(
     },
     description: {
       type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    // NEW: Added long_description field
+    long_description: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    // NEW: Added origin field with default
+    origin: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+      defaultValue: "Việt Nam",
     },
     cost_price: {
       type: DataTypes.DECIMAL(12, 2),
@@ -42,12 +58,26 @@ const Product = sequelize.define(
     },
     stock: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
       defaultValue: 0,
+    },
+    // NEW: Added category field
+    category: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+    },
+    // NEW: Added region field
+    region: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
     },
     manufacturer_id: {
       type: DataTypes.STRING(10),
       allowNull: false,
+      references: {
+        model: "manufacturers",
+        key: "manufacturer_id",
+      },
     },
     created_at: {
       type: DataTypes.DATE,

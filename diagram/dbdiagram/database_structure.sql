@@ -137,7 +137,7 @@ CREATE TABLE IF NOT EXISTS `backend`.`orders` (
   `customer_id` VARCHAR(20) NOT NULL,
   `shipping_address` VARCHAR(255) NOT NULL,
   `shipping_partner` VARCHAR(50) NULL DEFAULT 'Local',
-  `order_status` ENUM('Preparing', 'On delivery', 'Delivered') NULL DEFAULT 'Preparing',
+  `order_status` ENUM('Preparing', 'On delivery', 'Delivered','Cancelled') NULL DEFAULT 'Preparing',
   `payment_method` ENUM('Cash', 'OnlineBanking') NOT NULL,
   `payment_status` ENUM('Unpaid', 'Paid') NULL DEFAULT 'Unpaid',
   `total_amount` DECIMAL(12,2) NOT NULL,

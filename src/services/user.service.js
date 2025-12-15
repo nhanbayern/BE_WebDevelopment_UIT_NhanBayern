@@ -9,19 +9,18 @@ import "../models/associations.js";
 /**
  * ✅ Sinh user_id dạng user0001, user0002, ...
  */
-export const generateNextUserId = async () => {
-  const lastUser = await Customer.findOne({
-    order: [
-      [Sequelize.literal("CAST(SUBSTRING(user_id, 5) AS UNSIGNED)"), "DESC"],
-    ],
-  });
+export const generateNextUserId = () => {
+  const now = new Date();
+  const time = now
+    .toISOString()
+    .replace(/[-:.TZ]/g, "")  // 20251212153045xxx
+    .slice(0, 14);            // yyyyMMddHHmmss
 
-  if (!lastUser) return "user0001";
+  const rand = Math.floor(Math.random() * 9000) + 1000; // 1000–9999
 
-  const lastId = lastUser.user_id;
-  const num = parseInt(lastId.replace("user", ""), 10) + 1;
-  return `user${num.toString().padStart(4, "0")}`;
+  return `U${time}${rand}`;
 };
+
 
 /**
  * ✅ Khi khách hàng đăng nhập qua Google → tạo hoặc lấy thông tin
@@ -51,16 +50,32 @@ export const findOrCreateByGoogle = async ({
     return existing;
   }
 
-  const user_id = await generateNextUserId();
-  const newUser = await Customer.create({
-    user_id,
-    username,
-    email,
-    address,
-    google_id,
-  });
-
-  return newUser;
+  // Sử dụng transaction để tránh race condition
+  const transaction = await sequelize.transaction();
+  
+  try {
+    const user_id = await generateNextUserId();
+    
+    // Validate user_id trước khi tạo
+    if (!user_id || user_id.includes('NaN')) {
+      throw new Error(`Invalid user_id generated: ${user_id}`);
+    }
+    
+    const newUser = await Customer.create({
+      user_id,
+      username,
+      email,
+      address,
+      google_id,
+    }, { transaction });
+    
+    await transaction.commit();
+    return newUser;
+  } catch (error) {
+    await transaction.rollback();
+    console.error("❌ Error creating user:", error);
+    throw error;
+  }
 };
 
 /**

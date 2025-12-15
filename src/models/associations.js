@@ -4,6 +4,8 @@ import ShoppingCartItem from "./shopping_cart_item.model.js";
 import Product from "./product.model.js";
 import Order from "./order.model.js";
 import OrderDetail from "./order_detail.model.js";
+import Payment from "./payment.model.js";
+import Manufacturer from "./manufacturer.model.js";
 
 // Customer <-> UserAddress associations
 Customer.hasMany(UserAddress, {
@@ -71,4 +73,26 @@ OrderDetail.belongsTo(Product, {
   as: "product",
 });
 
-export { Customer, UserAddress, ShoppingCartItem, Product, Order, OrderDetail };
+// NEW: Order <-> Payment associations (payment info normalized to separate table)
+Order.hasOne(Payment, {
+  foreignKey: "order_id",
+  as: "payment",
+});
+
+Payment.belongsTo(Order, {
+  foreignKey: "order_id",
+  as: "order",
+});
+
+// NEW: Manufacturer <-> Product associations
+Manufacturer.hasMany(Product, {
+  foreignKey: "manufacturer_id",
+  as: "products",
+});
+
+Product.belongsTo(Manufacturer, {
+  foreignKey: "manufacturer_id",
+  as: "manufacturer",
+});
+
+export { Customer, UserAddress, ShoppingCartItem, Product, Order, OrderDetail, Payment, Manufacturer };

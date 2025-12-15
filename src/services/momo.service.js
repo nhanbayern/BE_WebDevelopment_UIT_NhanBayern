@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import Order from "../models/order.model.js";
+import Payment from "../models/payment.model.js";
 
 const MOMO_ENDPOINT =
   process.env.MOMO_API_URL || "https://test-payment.momo.vn/v2/gateway/api/create";
@@ -95,17 +96,52 @@ function registerPendingSession({ orderId, orderCodes, amount, requestId, userId
   return { timeoutAt };
 }
 
+/**
+ * Mark orders as paid - REFACTORED for normalized payments table
+ * Updates the payment record instead of the order record
+ */
 async function markOrdersPaid(orderCodes = []) {
   if (!orderCodes.length) return 0;
-  return Order.update(
-    { payment_status: "Paid", payment_method: "OnlineBanking" },
-    { where: { order_code: orderCodes } }
+
+  // Find orders by order_code to get order_ids
+  const orders = await Order.findAll({
+    where: { order_code: orderCodes },
+    attributes: ["order_id"],
+  });
+
+  if (!orders.length) return 0;
+
+  const orderIds = orders.map((o) => o.order_id);
+
+  // Update payment records with Completed status and OnlineBanking method
+  return Payment.update(
+    { payment_status: "Completed", payment_method: "OnlineBanking" },
+    { where: { order_id: orderIds } }
   );
 }
 
+/**
+ * Mark orders as unpaid - REFACTORED for normalized payments table
+ * Updates the payment record instead of the order record
+ */
 async function markOrdersUnpaid(orderCodes = []) {
   if (!orderCodes.length) return 0;
-  return Order.update({ payment_status: "Unpaid" }, { where: { order_code: orderCodes } });
+
+  // Find orders by order_code to get order_ids
+  const orders = await Order.findAll({
+    where: { order_code: orderCodes },
+    attributes: ["order_id"],
+  });
+
+  if (!orders.length) return 0;
+
+  const orderIds = orders.map((o) => o.order_id);
+
+  // Update payment records with Pending status (maps to legacy Unpaid)
+  return Payment.update(
+    { payment_status: "Pending" },
+    { where: { order_id: orderIds } }
+  );
 }
 
 function ensureEnv(value, key) {
@@ -195,11 +231,18 @@ export async function createMoMoPayment(orderCodeInput, userId) {
     throw new Error("order_codes là bắt buộc");
   }
 
+  // REFACTORED: Include payment data from normalized payments table
   const orders = await Order.findAll({
     where: {
       order_code: normalizedCodes,
       customer_id: userId,
     },
+    include: [
+      {
+        model: Payment,
+        as: "payment",
+      },
+    ],
     order: [["created_at", "ASC"]],
   });
 
@@ -209,10 +252,13 @@ export async function createMoMoPayment(orderCodeInput, userId) {
     throw error;
   }
 
-  const invalidStatus = orders.find(
-    (order) =>
-      order.payment_method !== "OnlineBanking" || order.payment_status !== "Unpaid"
-  );
+  // REFACTORED: Check payment status from the payment record instead of order
+  // payment_method must be OnlineBanking and payment_status must be Pending (legacy Unpaid)
+  const invalidStatus = orders.find((order) => {
+    const payment = order.payment;
+    if (!payment) return true; // No payment record = invalid
+    return payment.payment_method !== "OnlineBanking" || payment.payment_status !== "Pending";
+  });
 
   if (invalidStatus) {
     const error = new Error("Only unpaid OnlineBanking orders can be paid via MoMo.");
@@ -220,6 +266,7 @@ export async function createMoMoPayment(orderCodeInput, userId) {
     throw error;
   }
 
+  const orderCodes = orders.map((order) => order.order_code);
   ensureNoPendingSession(orderCodes);
 
   const totalAmount = orders.reduce(
@@ -234,7 +281,7 @@ export async function createMoMoPayment(orderCodeInput, userId) {
     throw error;
   }
 
-  const orderCodes = orders.map((order) => order.order_code);
+  // orderCodes already defined above, reuse it
   const retryIndex = nextRetryIndex(orderCodes);
   const uniqueSuffix = `${Date.now()}`;
   const orderId = `${orderCodes[0]}_${uniqueSuffix}_${retryIndex}`;

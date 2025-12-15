@@ -1,6 +1,12 @@
 import sequelize from "../config/db.js";
 import { DataTypes } from "sequelize";
 
+/**
+ * Order model - UPDATED for normalized schema
+ * REMOVED: payment_method, payment_status (now in payments table)
+ * Payment info is now stored in the separate payments table and
+ * accessed via the 'payment' association or virtual getters.
+ */
 const Order = sequelize.define(
   "Order",
   {
@@ -40,15 +46,8 @@ const Order = sequelize.define(
       allowNull: true,
       defaultValue: "Preparing",
     },
-    payment_method: {
-      type: DataTypes.ENUM("Cash", "OnlineBanking"),
-      allowNull: false,
-    },
-    payment_status: {
-      type: DataTypes.ENUM("Unpaid", "Paid"),
-      allowNull: true,
-      defaultValue: "Unpaid",
-    },
+    // NOTE: payment_method and payment_status have been moved to the payments table
+    // Virtual getters below provide backward compatibility for API responses
     total_amount: {
       type: DataTypes.DECIMAL(12, 2),
       allowNull: false,
