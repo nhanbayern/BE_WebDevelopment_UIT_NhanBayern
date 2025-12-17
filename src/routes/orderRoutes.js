@@ -343,4 +343,109 @@ router.patch(
   orderController.updatePaymentStatus
 );
 
+/**
+ * @openapi
+ * /orders/{order_id}/cancel:
+ *   patch:
+ *     tags:
+ *       - Orders
+ *     summary: Hủy đơn hàng
+ *     description: |
+ *       Cho phép người dùng hủy đơn hàng của mình.
+ *       
+ *       **Điều kiện hủy:**
+ *       - Đơn hàng phải thuộc về người dùng đang đăng nhập
+ *       - Trạng thái đơn hàng phải là "Preparing"
+ *       - Không thể hủy đơn hàng đã "On delivery", "Delivered", hoặc "Cancelled"
+ *       
+ *       **Khi hủy đơn hàng:**
+ *       - Cập nhật order_status thành "Cancelled"
+ *       - Hoàn trả số lượng sản phẩm vào kho (stock)
+ *       - Cập nhật payment_status thành "Failed"
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: order_id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID của đơn hàng cần hủy
+ *         example: 123
+ *     responses:
+ *       200:
+ *         description: Hủy đơn hàng thành công
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: "success"
+ *                 message:
+ *                   type: string
+ *                   example: "Đơn hàng đã được hủy thành công"
+ *                 order_id:
+ *                   type: integer
+ *                   example: 123
+ *                 order_code:
+ *                   type: string
+ *                   example: "ORD20251215-000123"
+ *       400:
+ *         description: Không thể hủy đơn hàng (trạng thái không hợp lệ)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "INVALID_ORDER_STATUS"
+ *                 message:
+ *                   type: string
+ *                   example: "Không thể hủy đơn hàng có trạng thái \"On delivery\". Chỉ có thể hủy đơn hàng đang \"Preparing\""
+ *       401:
+ *         description: Chưa xác thực
+ *       403:
+ *         description: Không có quyền hủy đơn hàng này
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "FORBIDDEN"
+ *                 message:
+ *                   type: string
+ *                   example: "Bạn không có quyền hủy đơn hàng này"
+ *       404:
+ *         description: Đơn hàng không tồn tại
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "ORDER_NOT_FOUND"
+ *                 message:
+ *                   type: string
+ *                   example: "Đơn hàng không tồn tại"
+ *       500:
+ *         description: Lỗi server
+ */
+
+/**
+ * @route   PATCH /orders/:order_id/cancel
+ * @desc    Cancel an order (only if status is Preparing)
+ * @access  Private
+ */
+router.patch(
+  "/:order_id/cancel",
+  authenticateToken,
+  orderController.cancelOrder
+);
+
 export default router;

@@ -406,3 +406,99 @@ export const updatePaymentStatus = async (order_id, payment_status) => {
 
   return { status: "success", message: "Cập nhật thanh toán thành công" };
 };
+
+/**
+ * Cancel an order
+ * PATCH /orders/:order_id/cancel
+ * 
+ * Business Rules:
+ * - Order must exist
+ * - Order must belong to the requesting user
+ * - Order status must be "Preparing" (cannot cancel if On delivery, Delivered, or already Cancelled)
+ * 
+ * When cancelled:
+ * - Update order_status to "Cancelled"
+ * - Restore product stock from order_details
+ * - Update payment record to "Failed"
+ * 
+ * All operations are wrapped in a transaction for data consistency.
+ */
+export const cancelOrder = async (order_id, user_id) => {
+  const transaction = await sequelize.transaction();
+
+  try {
+    // Step 1: Find the order with its details and payment
+    const order = await Order.findByPk(order_id, {
+      include: [
+        {
+          model: OrderDetail,
+          as: "orderDetails",
+        },
+        {
+          model: Payment,
+          as: "payment",
+        },
+      ],
+      transaction,
+      lock: transaction.LOCK.UPDATE, // Lock for update to prevent race conditions
+    });
+
+    // Step 2: Validate order exists
+    if (!order) {
+      throw { code: "ORDER_NOT_FOUND", message: "Đơn hàng không tồn tại" };
+    }
+
+    // Step 3: Validate order belongs to the user
+    if (order.customer_id !== user_id) {
+      throw {
+        code: "FORBIDDEN",
+        message: "Bạn không có quyền hủy đơn hàng này",
+      };
+    }
+
+    // Step 4: Validate order status is "Preparing"
+    if (order.order_status !== "Preparing") {
+      throw {
+        code: "INVALID_ORDER_STATUS",
+        message: `Không thể hủy đơn hàng có trạng thái "${order.order_status}". Chỉ có thể hủy đơn hàng đang "Preparing"`,
+      };
+    }
+
+    // Step 5: Update order status to "Cancelled"
+    await Order.update(
+      { order_status: "Cancelled" },
+      { where: { order_id }, transaction }
+    );
+
+    // Step 6: Restore product stock based on order_details
+    // Increment stock for each product that was ordered
+    for (const detail of order.orderDetails) {
+      await Product.increment("stock", {
+        by: detail.quantity,
+        where: { product_id: detail.product_id },
+        transaction,
+      });
+    }
+
+    // Step 7: Update payment record to "Failed"
+    if (order.payment) {
+      await Payment.update(
+        { payment_status: "Failed" },
+        { where: { order_id }, transaction }
+      );
+    }
+
+    // Commit transaction
+    await transaction.commit();
+
+    return {
+      status: "success",
+      message: "Đơn hàng đã được hủy thành công",
+      order_id: order.order_id,
+      order_code: order.order_code,
+    };
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+};

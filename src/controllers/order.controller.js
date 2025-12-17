@@ -276,3 +276,53 @@ export const updatePaymentStatus = async (req, res) => {
     });
   }
 };
+
+/**
+ * PATCH /orders/:order_id/cancel
+ * Cancel an order (user can only cancel orders with status "Preparing")
+ */
+export const cancelOrder = async (req, res) => {
+  try {
+    const user_id = req.user?.user_id;
+    const { order_id } = req.params;
+
+    if (!user_id) {
+      return res.status(401).json({
+        error: "UNAUTHORIZED",
+        message: "Vui lòng đăng nhập",
+      });
+    }
+
+    const result = await orderService.cancelOrder(order_id, user_id);
+
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error("[OrderController] cancelOrder error:", error);
+
+    if (error.code === "ORDER_NOT_FOUND") {
+      return res.status(404).json({
+        error: error.code,
+        message: error.message,
+      });
+    }
+
+    if (error.code === "FORBIDDEN") {
+      return res.status(403).json({
+        error: error.code,
+        message: error.message,
+      });
+    }
+
+    if (error.code === "INVALID_ORDER_STATUS") {
+      return res.status(400).json({
+        error: error.code,
+        message: error.message,
+      });
+    }
+
+    return res.status(500).json({
+      error: "INTERNAL_SERVER_ERROR",
+      message: "Có lỗi xảy ra khi hủy đơn hàng",
+    });
+  }
+};

@@ -42,7 +42,7 @@ const Order = sequelize.define(
       defaultValue: "Local",
     },
     order_status: {
-      type: DataTypes.ENUM("Preparing", "On delivery", "Delivered"),
+      type: DataTypes.ENUM("Preparing", "On delivery", "Delivered", "Cancelled"),
       allowNull: true,
       defaultValue: "Preparing",
     },
