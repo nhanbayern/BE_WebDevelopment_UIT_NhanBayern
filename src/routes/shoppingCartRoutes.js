@@ -22,9 +22,9 @@ const router = express.Router();
 
 /**
  * @swagger
- * /user/cartitems:
+ * /customer/cartitems:
  *   get:
- *     summary: Get all cart items for authenticated user
+ *     summary: Get all cart items for authenticated customer
  *     tags: [ShoppingCart]
  *     security:
  *       - bearerAuth: []
@@ -74,12 +74,12 @@ router.get("/cartitems", authenticateToken, getCartItemsController);
 
 /**
  * @swagger
- * /user/insertitems:
+ * /customer/insertitems:
  *   post:
  *     summary: Add item to cart or update quantity if exists (INSERT or UPDATE)
  *     description: |
  *       Uses INSERT ... ON DUPLICATE KEY UPDATE for atomic, concurrency-safe operation.
- *       If the (user_id, product_id) pair exists, quantity is incremented.
+ *       If the (customer_id, product_id) pair exists, quantity is incremented.
  *       Otherwise, a new cart item is created.
  *     tags: [ShoppingCart]
  *     security:
@@ -149,7 +149,7 @@ router.post(
 
 /**
  * @swagger
- * /user/cartitems/{productId}:
+ * /customer/cartitems/{productId}:
  *   put:
  *     summary: Update cart item quantity (set to specific value)
  *     tags: [ShoppingCart]
@@ -199,7 +199,7 @@ router.put(
 
 /**
  * @swagger
- * /user/cartitems/{productId}:
+ * /customer/cartitems/{productId}:
  *   delete:
  *     summary: Remove item from cart
  *     tags: [ShoppingCart]
@@ -232,7 +232,7 @@ router.delete(
 
 /**
  * @swagger
- * /user/incrementby1/{productId}:
+ * /customer/incrementby1/{productId}:
  *   post:
  *     summary: Increment cart item quantity by 1
  *     tags: [ShoppingCart]
@@ -291,7 +291,7 @@ router.post(
 
 /**
  * @swagger
- * /user/decrementby1/{productId}:
+ * /customer/decrementby1/{productId}:
  *   post:
  *     summary: Decrement cart item quantity by 1 (minimum 1)
  *     tags: [ShoppingCart]
@@ -350,9 +350,9 @@ router.post(
 
 /**
  * @swagger
- * /user/cartitems:
+ * /customer/cartitems:
  *   delete:
- *     summary: Clear all cart items for authenticated user
+ *     summary: Clear all cart items for authenticated customer
  *     tags: [ShoppingCart]
  *     security:
  *       - bearerAuth: []

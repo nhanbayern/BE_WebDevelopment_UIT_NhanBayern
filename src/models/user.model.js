@@ -1,15 +1,22 @@
 import { DataTypes, Sequelize, Op } from "sequelize";
 import sequelize from "../config/db.js";
 
+/**
+ * Customer model - UPDATED for new schema
+ * REMOVED: separate customers_account table
+ * NOW: Authentication (login_type, password_hash, google_id) directly in customers table
+ * RENAMED: user_id → customer_id, username → customername
+ * REMOVED: address field (now in customer_address table)
+ */
 const Customer = sequelize.define(
   "Customer",
   {
-    user_id: {
+    customer_id: {
       type: DataTypes.STRING(20),
       primaryKey: true,
       allowNull: false,
     },
-    username: {
+    customername: {
       type: DataTypes.STRING(100),
       allowNull: false,
     },
@@ -23,7 +30,7 @@ const Customer = sequelize.define(
       type: DataTypes.STRING(20),
       allowNull: true,
     },
-    address: {
+    profileimage: {
       type: DataTypes.STRING(255),
       allowNull: true,
     },
@@ -36,10 +43,19 @@ const Customer = sequelize.define(
       type: DataTypes.DATE,
       defaultValue: Sequelize.literal("CURRENT_TIMESTAMP"),
     },
+    login_type: {
+      type: DataTypes.ENUM("google", "password"),
+      allowNull: false,
+      defaultValue: "password",
+    },
+    password_hash: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+    },
   },
   {
     tableName: "customers",
-    timestamps: false, // vì bạn đã có created_at
+    timestamps: false,
   }
 );
 

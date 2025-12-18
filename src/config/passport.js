@@ -12,7 +12,7 @@ console.log("GOOGLE ENV CHECK:", {
   callback: process.env.GOOGLE_CALLBACK_URL,
 });
 
-import { findOrCreateByGoogle } from "../services/user.service.js";
+import { findOrCreateByGoogle } from "../services/customer.service.js";
 
 passport.use(
   new GoogleStrategy(

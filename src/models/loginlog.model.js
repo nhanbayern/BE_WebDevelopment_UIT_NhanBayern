@@ -1,14 +1,33 @@
 import { DataTypes } from "sequelize";
 import sequelize from "../config/db.js";
 
+/**
+ * LoginLog model - UPDATED for new schema
+ * REMOVED: account_id (customers_account table no longer exists)
+ * ADDED: customer_id and staff_id to support both customer and staff login tracking
+ * Exactly one of customer_id or staff_id should be set per log entry
+ */
 const LoginLog = sequelize.define(
   "LoginLog",
   {
     log_id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-    // session_id to link login_logs with refresh_tokens.session_id
     session_id: { type: DataTypes.INTEGER, allowNull: true },
-    // account_id length increased to match customers_account.account_id (STRING(30))
-    account_id: { type: DataTypes.STRING(30), allowNull: true },
+    customer_id: { 
+      type: DataTypes.STRING(30), 
+      allowNull: true,
+      references: {
+        model: "customers",
+        key: "customer_id",
+      },
+    },
+    staff_id: { 
+      type: DataTypes.STRING(20), 
+      allowNull: true,
+      references: {
+        model: "staff",
+        key: "staff_id",
+      },
+    },
     input_username: {
       type: DataTypes.STRING(50),
       allowNull: true,

@@ -1,20 +1,25 @@
 import { DataTypes, Sequelize } from "sequelize";
 import sequelize from "../config/db.js";
 
-const UserAddress = sequelize.define(
-  "UserAddress",
+/**
+ * CustomerAddress model - UPDATED for new schema
+ * RENAMED: user_id → customer_id
+ * Table name: customer_address (renamed from user_address)
+ */
+const CustomerAddress = sequelize.define(
+  "CustomerAddress",
   {
     address_id: {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,
     },
-    user_id: {
+    customer_id: {
       type: DataTypes.STRING(20),
       allowNull: false,
       references: {
         model: "customers",
-        key: "user_id",
+        key: "customer_id",
       },
     },
     address_line: {
@@ -45,14 +50,14 @@ const UserAddress = sequelize.define(
     },
   },
   {
-    tableName: "user_address",
-    timestamps: false, // Table doesn't have created_at/updated_at
+    tableName: "customer_address",
+    timestamps: false,
     indexes: [
       {
-        fields: ["user_id"],
+        fields: ["customer_id"],
       },
       {
-        fields: ["user_id", "is_default"],
+        fields: ["customer_id", "is_default"],
       },
       {
         unique: true,
@@ -62,4 +67,6 @@ const UserAddress = sequelize.define(
   }
 );
 
-export default UserAddress;
+// Export as both names for backward compatibility during migration
+export default CustomerAddress;
+export { CustomerAddress as UserAddress };

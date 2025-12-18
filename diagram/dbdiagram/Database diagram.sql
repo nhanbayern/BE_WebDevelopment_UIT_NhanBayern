@@ -21,14 +21,16 @@ USE `backend` ;
 -- Table `backend`.`customers`
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `backend`.`customers` (
-  `user_id` VARCHAR(20) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NOT NULL,
-  `username` VARCHAR(100) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NOT NULL,
+  `customer_id` VARCHAR(20) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NOT NULL,
+  `customername` VARCHAR(100) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NOT NULL,
   `email` VARCHAR(150) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NOT NULL,
   `phone_number` VARCHAR(20) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NULL DEFAULT NULL,
-  `address` VARCHAR(255) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NULL DEFAULT NULL,
+  `profileimage` VARCHAR(255) NULL DEFAULT NULL,
   `google_id` VARCHAR(50) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NULL DEFAULT NULL,
   `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`user_id`),
+  `login_type` ENUM('google', 'password') NOT NULL DEFAULT 'password',
+  `password_hash` VARCHAR(255) NULL DEFAULT NULL,
+  PRIMARY KEY (`customer_id`),
   UNIQUE INDEX `email` (`email` ASC) VISIBLE,
   UNIQUE INDEX `google_id` (`google_id` ASC) VISIBLE)
 ENGINE = InnoDB
@@ -37,24 +39,71 @@ COLLATE = utf8mb4_unicode_ci;
 
 
 -- -----------------------------------------------------
--- Table `backend`.`customers_account`
+-- Table `backend`.`customer_address`
 -- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `backend`.`customers_account` (
-  `account_id` VARCHAR(30) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NOT NULL,
-  `user_id` VARCHAR(20) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NOT NULL,
-  `login_type` ENUM('google', 'password') CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NOT NULL,
-  `email` VARCHAR(150) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NULL DEFAULT NULL,
-  `password_hash` VARCHAR(255) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NULL DEFAULT NULL,
-  `google_id` VARCHAR(50) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NULL DEFAULT NULL,
-  `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`account_id`),
-  UNIQUE INDEX `uq_email_unique` (`email` ASC) VISIBLE,
-  UNIQUE INDEX `uq_google_id_unique` (`google_id` ASC) VISIBLE,
-  INDEX `fk_customer_account_user` (`user_id` ASC) VISIBLE,
-  CONSTRAINT `fk_customer_account_user`
-    FOREIGN KEY (`user_id`)
-    REFERENCES `backend`.`customers` (`user_id`)
+CREATE TABLE IF NOT EXISTS `backend`.`customer_address` (
+  `address_id` INT NOT NULL AUTO_INCREMENT,
+  `customer_id` VARCHAR(20) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NOT NULL,
+  `address_line` VARCHAR(255) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NOT NULL,
+  `ward` VARCHAR(50) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NULL DEFAULT NULL,
+  `district` VARCHAR(50) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NULL DEFAULT NULL,
+  `province` VARCHAR(50) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NULL DEFAULT NULL,
+  `is_default` TINYINT(1) NULL DEFAULT '0',
+  `address_code` VARCHAR(64) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NULL DEFAULT NULL,
+  PRIMARY KEY (`address_id`),
+  UNIQUE INDEX `address_code` (`address_code` ASC) VISIBLE,
+  INDEX `user_id` (`customer_id` ASC) VISIBLE,
+  CONSTRAINT `customer_address_ibfk_1`
+    FOREIGN KEY (`customer_id`)
+    REFERENCES `backend`.`customers` (`customer_id`)
     ON DELETE CASCADE)
+ENGINE = InnoDB
+AUTO_INCREMENT = 15
+DEFAULT CHARACTER SET = utf8mb4
+COLLATE = utf8mb4_unicode_ci;
+
+
+-- -----------------------------------------------------
+-- Table `backend`.`staff`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `backend`.`staff` (
+  `staff_id` VARCHAR(20) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NOT NULL,
+  `profileimg` VARCHAR(255) NULL DEFAULT NULL,
+  `staff_name` VARCHAR(100) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NOT NULL,
+  `email` VARCHAR(150) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NULL DEFAULT NULL,
+  `phone_number` VARCHAR(20) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NULL DEFAULT NULL,
+  `position` VARCHAR(100) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NULL DEFAULT NULL,
+  `login_name` VARCHAR(50) NOT NULL,
+  `password_hash` VARCHAR(255) NOT NULL,
+  `status` ENUM('ACTIVE', 'INACTIVE') NOT NULL DEFAULT 'ACTIVE',
+  `created_at` DATETIME NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`staff_id`),
+  UNIQUE INDEX `login_name` (`login_name` ASC) VISIBLE)
+ENGINE = InnoDB
+DEFAULT CHARACTER SET = utf8mb4
+COLLATE = utf8mb4_unicode_ci;
+
+
+-- -----------------------------------------------------
+-- Table `backend`.`customer_audit`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `backend`.`customer_audit` (
+  `audit_id` INT NOT NULL AUTO_INCREMENT,
+  `customer_id` VARCHAR(20) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NOT NULL,
+  `staff_id` VARCHAR(20) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NOT NULL,
+  `action` ENUM('UPDATE') NOT NULL,
+  `old_data` JSON NULL DEFAULT NULL,
+  `new_data` JSON NULL DEFAULT NULL,
+  `action_time` DATETIME NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`audit_id`),
+  INDEX `fk_customer_audit_customer` (`customer_id` ASC) VISIBLE,
+  INDEX `fk_customer_audit_staff` (`staff_id` ASC) VISIBLE,
+  CONSTRAINT `fk_customer_audit_customer`
+    FOREIGN KEY (`customer_id`)
+    REFERENCES `backend`.`customers` (`customer_id`),
+  CONSTRAINT `fk_customer_audit_staff`
+    FOREIGN KEY (`staff_id`)
+    REFERENCES `backend`.`staff` (`staff_id`))
 ENGINE = InnoDB
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
@@ -83,7 +132,7 @@ CREATE TABLE IF NOT EXISTS `backend`.`emailotp` (
   INDEX `idx_email_otp_email` (`email` ASC) VISIBLE,
   INDEX `idx_email_otp_ip` (`ip_address` ASC) VISIBLE)
 ENGINE = InnoDB
-AUTO_INCREMENT = 15
+AUTO_INCREMENT = 17
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -94,7 +143,8 @@ COLLATE = utf8mb4_unicode_ci;
 CREATE TABLE IF NOT EXISTS `backend`.`login_logs` (
   `log_id` INT NOT NULL AUTO_INCREMENT,
   `session_id` INT NULL DEFAULT NULL,
-  `account_id` VARCHAR(30) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NULL DEFAULT NULL,
+  `customer_id` VARCHAR(30) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NULL DEFAULT NULL,
+  `staff_id` VARCHAR(20) NULL DEFAULT NULL,
   `input_username` VARCHAR(50) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NULL DEFAULT NULL,
   `username` VARCHAR(50) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NOT NULL,
   `ip_address` VARCHAR(45) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NOT NULL,
@@ -104,10 +154,10 @@ CREATE TABLE IF NOT EXISTS `backend`.`login_logs` (
   `status` ENUM('success', 'failed', 'logout') CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NOT NULL,
   `error_message` VARCHAR(255) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NULL DEFAULT NULL,
   PRIMARY KEY (`log_id`),
-  INDEX `account_id` (`account_id` ASC) VISIBLE,
+  INDEX `account_id` (`customer_id` ASC) VISIBLE,
   INDEX `idx_session_id` (`session_id` ASC) VISIBLE)
 ENGINE = InnoDB
-AUTO_INCREMENT = 219
+AUTO_INCREMENT = 243
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -139,7 +189,7 @@ CREATE TABLE IF NOT EXISTS `backend`.`orders` (
   `recipient_phone` VARCHAR(20) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NOT NULL,
   `shipping_address` VARCHAR(255) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NOT NULL,
   `shipping_partner` VARCHAR(50) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NULL DEFAULT 'Local',
-  `order_status` ENUM('Preparing', 'On delivery', 'Delivered') CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NULL DEFAULT 'Preparing',
+  `order_status` ENUM('Preparing', 'On delivery', 'Delivered', 'Cancelled') CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NULL DEFAULT 'Preparing',
   `total_amount` DECIMAL(12,2) NOT NULL,
   `final_amount` DECIMAL(12,2) NOT NULL,
   `created_at` DATETIME NULL DEFAULT CURRENT_TIMESTAMP,
@@ -148,9 +198,34 @@ CREATE TABLE IF NOT EXISTS `backend`.`orders` (
   INDEX `customer_id` (`customer_id` ASC) VISIBLE,
   CONSTRAINT `orders_ibfk_1`
     FOREIGN KEY (`customer_id`)
-    REFERENCES `backend`.`customers` (`user_id`))
+    REFERENCES `backend`.`customers` (`customer_id`))
 ENGINE = InnoDB
-AUTO_INCREMENT = 31
+AUTO_INCREMENT = 37
+DEFAULT CHARACTER SET = utf8mb4
+COLLATE = utf8mb4_unicode_ci;
+
+
+-- -----------------------------------------------------
+-- Table `backend`.`order_audit`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `backend`.`order_audit` (
+  `audit_id` INT NOT NULL AUTO_INCREMENT,
+  `order_id` INT NOT NULL,
+  `staff_id` VARCHAR(20) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NOT NULL,
+  `old_status` ENUM('Preparing', 'On delivery', 'Delivered', 'Cancelled') NULL DEFAULT NULL,
+  `new_status` ENUM('Preparing', 'On delivery', 'Delivered', 'Cancelled') NULL DEFAULT NULL,
+  `note` TEXT CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NULL DEFAULT NULL,
+  `action_time` DATETIME NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`audit_id`),
+  INDEX `fk_order_audit_order` (`order_id` ASC) VISIBLE,
+  INDEX `fk_order_audit_staff` (`staff_id` ASC) VISIBLE,
+  CONSTRAINT `fk_order_audit_order`
+    FOREIGN KEY (`order_id`)
+    REFERENCES `backend`.`orders` (`order_id`),
+  CONSTRAINT `fk_order_audit_staff`
+    FOREIGN KEY (`staff_id`)
+    REFERENCES `backend`.`staff` (`staff_id`))
+ENGINE = InnoDB
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -209,7 +284,7 @@ CREATE TABLE IF NOT EXISTS `backend`.`order_details` (
     FOREIGN KEY (`product_id`)
     REFERENCES `backend`.`products` (`product_id`))
 ENGINE = InnoDB
-AUTO_INCREMENT = 55
+AUTO_INCREMENT = 61
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -234,6 +309,56 @@ CREATE TABLE IF NOT EXISTS `backend`.`payments` (
     ON DELETE CASCADE
     ON UPDATE CASCADE)
 ENGINE = InnoDB
+AUTO_INCREMENT = 7
+DEFAULT CHARACTER SET = utf8mb4
+COLLATE = utf8mb4_unicode_ci;
+
+
+-- -----------------------------------------------------
+-- Table `backend`.`payment_audit`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `backend`.`payment_audit` (
+  `audit_id` INT NOT NULL AUTO_INCREMENT,
+  `payment_id` INT NOT NULL,
+  `staff_id` VARCHAR(20) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NOT NULL,
+  `old_status` ENUM('Pending', 'Completed', 'Failed') NULL DEFAULT NULL,
+  `new_status` ENUM('Pending', 'Completed', 'Failed') NULL DEFAULT NULL,
+  `action_time` DATETIME NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`audit_id`),
+  INDEX `fk_payment_audit_payment` (`payment_id` ASC) VISIBLE,
+  INDEX `fk_payment_audit_staff` (`staff_id` ASC) VISIBLE,
+  CONSTRAINT `fk_payment_audit_payment`
+    FOREIGN KEY (`payment_id`)
+    REFERENCES `backend`.`payments` (`payment_id`),
+  CONSTRAINT `fk_payment_audit_staff`
+    FOREIGN KEY (`staff_id`)
+    REFERENCES `backend`.`staff` (`staff_id`))
+ENGINE = InnoDB
+DEFAULT CHARACTER SET = utf8mb4
+COLLATE = utf8mb4_unicode_ci;
+
+
+-- -----------------------------------------------------
+-- Table `backend`.`product_audit`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `backend`.`product_audit` (
+  `audit_id` INT NOT NULL AUTO_INCREMENT,
+  `product_id` VARCHAR(10) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NOT NULL,
+  `staff_id` VARCHAR(20) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NOT NULL,
+  `action` ENUM('CREATE', 'UPDATE', 'DELETE') NOT NULL,
+  `old_data` JSON NULL DEFAULT NULL,
+  `new_data` JSON NULL DEFAULT NULL,
+  `action_time` DATETIME NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`audit_id`),
+  INDEX `fk_product_audit_product` (`product_id` ASC) VISIBLE,
+  INDEX `fk_product_audit_staff` (`staff_id` ASC) VISIBLE,
+  CONSTRAINT `fk_product_audit_product`
+    FOREIGN KEY (`product_id`)
+    REFERENCES `backend`.`products` (`product_id`),
+  CONSTRAINT `fk_product_audit_staff`
+    FOREIGN KEY (`staff_id`)
+    REFERENCES `backend`.`staff` (`staff_id`))
+ENGINE = InnoDB
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -257,7 +382,7 @@ CREATE TABLE IF NOT EXISTS `backend`.`refresh_tokens` (
   INDEX `idx_token_hash` (`token_hash` ASC) VISIBLE,
   INDEX `idx_user_id` (`user_id` ASC) VISIBLE)
 ENGINE = InnoDB
-AUTO_INCREMENT = 318
+AUTO_INCREMENT = 324
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -267,48 +392,23 @@ COLLATE = utf8mb4_unicode_ci;
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `backend`.`shopping_cart_item` (
   `item_id` INT NOT NULL AUTO_INCREMENT,
-  `user_id` VARCHAR(20) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NOT NULL,
+  `customer_id` VARCHAR(20) NULL DEFAULT NULL,
   `product_id` VARCHAR(10) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NOT NULL,
   `quantity` INT NOT NULL,
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`item_id`),
-  UNIQUE INDEX `unique_user_product` (`user_id` ASC, `product_id` ASC) VISIBLE,
+  UNIQUE INDEX `unique_user_product` (`customer_id` ASC, `product_id` ASC) VISIBLE,
   INDEX `product_id` (`product_id` ASC) VISIBLE,
   CONSTRAINT `fk_cart_item_user`
-    FOREIGN KEY (`user_id`)
-    REFERENCES `backend`.`customers` (`user_id`)
+    FOREIGN KEY (`customer_id`)
+    REFERENCES `backend`.`customers` (`customer_id`)
     ON DELETE CASCADE,
   CONSTRAINT `shopping_cart_item_ibfk_2`
     FOREIGN KEY (`product_id`)
     REFERENCES `backend`.`products` (`product_id`))
 ENGINE = InnoDB
-AUTO_INCREMENT = 94
-DEFAULT CHARACTER SET = utf8mb4
-COLLATE = utf8mb4_unicode_ci;
-
-
--- -----------------------------------------------------
--- Table `backend`.`user_address`
--- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `backend`.`user_address` (
-  `address_id` INT NOT NULL AUTO_INCREMENT,
-  `user_id` VARCHAR(20) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NOT NULL,
-  `address_line` VARCHAR(255) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NOT NULL,
-  `ward` VARCHAR(50) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NULL DEFAULT NULL,
-  `district` VARCHAR(50) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NULL DEFAULT NULL,
-  `province` VARCHAR(50) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NULL DEFAULT NULL,
-  `is_default` TINYINT(1) NULL DEFAULT '0',
-  `address_code` VARCHAR(64) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NULL DEFAULT NULL,
-  PRIMARY KEY (`address_id`),
-  UNIQUE INDEX `address_code` (`address_code` ASC) VISIBLE,
-  INDEX `user_id` (`user_id` ASC) VISIBLE,
-  CONSTRAINT `user_address_ibfk_1`
-    FOREIGN KEY (`user_id`)
-    REFERENCES `backend`.`customers` (`user_id`)
-    ON DELETE CASCADE)
-ENGINE = InnoDB
-AUTO_INCREMENT = 15
+AUTO_INCREMENT = 110
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -331,32 +431,19 @@ DELIMITER $$
 USE `backend`$$
 CREATE
 DEFINER=`root`@`%`
-TRIGGER `backend`.`trg_create_account_id`
-BEFORE INSERT ON `backend`.`customers_account`
+TRIGGER `backend`.`trg_payments_cash_completed`
+AFTER UPDATE ON `backend`.`payments`
 FOR EACH ROW
 BEGIN
-    -- Nếu account_id chưa được truyền vào thì tự generate
-    IF NEW.account_id IS NULL OR NEW.account_id = '' THEN
-        SET NEW.account_id = CONCAT('ACC', NEW.user_id);
-    END IF;
-END$$
+    -- Chỉ xử lý khi trạng thái thanh toán chuyển sang Completed
+    IF NEW.payment_method = 'Cash'
+       AND NEW.payment_status = 'Completed'
+       AND OLD.payment_status <> 'Completed' THEN
 
-USE `backend`$$
-CREATE
-DEFINER=`root`@`%`
-TRIGGER `backend`.`trg_payments_after_insert`
-AFTER INSERT ON `backend`.`payments`
-FOR EACH ROW
-BEGIN
-    IF NEW.transaction_id IS NULL THEN
-        UPDATE payments
-        SET transaction_id = CONCAT(
-            'TX',
-            DATE_FORMAT(NOW(), '%Y%m%d'),
-            '-',
-            LPAD(NEW.payment_id, 6, '0')
-        )
-        WHERE payment_id = NEW.payment_id;
+        UPDATE orders
+        SET order_status = 'Delivered'
+        WHERE order_id = NEW.order_id;
+
     END IF;
 END$$
 

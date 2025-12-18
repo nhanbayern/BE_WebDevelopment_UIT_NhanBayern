@@ -2,8 +2,12 @@ import bcrypt from "bcryptjs";
 import nodemailer from "nodemailer";
 import EmailOTP from "../models/email_otp.model.js";
 import Customer from "../models/user.model.js";
-import CustomersAccount from "../models/customers_account.model.js";
 import { onLoginSuccess } from "./login.service.js";
+
+/**
+ * EmailOTP Service
+ * UPDATED: No more CustomersAccount table, authentication is in customers table
+ */
 
 // -----------------------
 // 📌 CONFIG SMTP (Gmail)
@@ -167,6 +171,7 @@ export async function verifyOtp({ email, otp }) {
 
 // -----------------------
 // 📌 FINALIZE REGISTRATION
+// UPDATED: Create customer directly with authentication fields
 // -----------------------
 export async function finalizeRegistration({
   email,
@@ -177,30 +182,19 @@ export async function finalizeRegistration({
   password,
   phone,
 }) {
-  const user_id = "U" + Date.now();
-  const account_id = "A" + Date.now();
+  const customer_id = `C${Date.now()}${Math.floor(Math.random() * 1000)
+    .toString()
+    .padStart(3, "0")}`;
 
-  // basic phone validation: optional, accept + and digits 7-15 length
+  // Basic phone validation
   const phone_number =
     typeof phone === "string" && /^\+?\d{7,15}$/.test(phone) ? phone : null;
 
-  const createdUser = await Customer.create({
-    user_id,
-    username,
-    email,
-    phone_number,
-  });
-
-  const accountPayload = {
-    account_id,
-    user_id,
-    login_type: "password",
-    email,
-  };
+  // Hash password if provided
+  let password_hash = null;
   if (password) {
     try {
-      const passHash = await bcrypt.hash(password, 10);
-      accountPayload.password_hash = passHash;
+      password_hash = await bcrypt.hash(password, 10);
     } catch (err) {
       console.warn(
         "[EmailOTP] Failed to hash password during finalizeRegistration",
@@ -208,16 +202,27 @@ export async function finalizeRegistration({
       );
     }
   }
-  await CustomersAccount.create(accountPayload);
 
+  // Create customer with authentication data (no separate account table)
+  const createdUser = await Customer.create({
+    customer_id,
+    customername: username,
+    email,
+    phone_number,
+    login_type: "password",
+    password_hash,
+  });
+
+  // Remove OTP record
   await EmailOTP.destroy({ where: { email } });
 
+  // Log in the new user
   return await onLoginSuccess(
     createdUser,
     res,
     ip,
     user_agent,
-    account_id,
+    null, // account_id deprecated
     email
   );
 }
@@ -270,6 +275,7 @@ export async function resendOtp({
 
 // -----------------------
 // 📌 CREATE + SEND RESET PASSWORD OTP
+// UPDATED: Check customers table instead of customers_account
 // -----------------------
 export async function createAndSendResetOtp({
   email,
@@ -277,9 +283,9 @@ export async function createAndSendResetOtp({
   user_agent = null,
   device_fingerprint = null,
 }) {
-  // For reset flow, email must exist in customers_account
-  const acct = await CustomersAccount.findOne({ where: { email } });
-  if (!acct) return { success: false, code: 404, message: "Email not found" };
+  // For reset flow, email must exist in customers
+  const customer = await Customer.findOne({ where: { email } });
+  if (!customer) return { success: false, code: 404, message: "Email not found" };
 
   const otp = generateNumericOtp(6);
   const otp_hash = await bcrypt.hash(otp, 10);
@@ -351,18 +357,19 @@ export async function verifyOtpForType({ email, otp, otp_type }) {
 
 // -----------------------
 // 📌 RESET PASSWORD BY EMAIL
+// UPDATED: Update customers table instead of customers_account
 // -----------------------
 export async function resetPasswordByEmail({ email, new_password }) {
-  const acct = await CustomersAccount.findOne({ where: { email } });
-  if (!acct) return { success: false, code: 404, message: "Email not found" };
+  const customer = await Customer.findOne({ where: { email } });
+  if (!customer) return { success: false, code: 404, message: "Email not found" };
 
   try {
     const passHash = await bcrypt.hash(new_password, 10);
-    await CustomersAccount.update(
+    await Customer.update(
       { password_hash: passHash },
       { where: { email } }
     );
-    // delete any reset OTPs for this email
+    // Delete any reset OTPs for this email
     await EmailOTP.destroy({ where: { email, otp_type: "forgot_password" } });
     return { success: true };
   } catch (err) {

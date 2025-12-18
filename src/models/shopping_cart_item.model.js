@@ -1,6 +1,10 @@
 import { DataTypes, Sequelize } from "sequelize";
 import sequelize from "../config/db.js";
 
+/**
+ * ShoppingCartItem model - UPDATED for new schema
+ * RENAMED: user_id → customer_id
+ */
 const ShoppingCartItem = sequelize.define(
   "ShoppingCartItem",
   {
@@ -10,12 +14,12 @@ const ShoppingCartItem = sequelize.define(
       autoIncrement: true,
       allowNull: false,
     },
-    user_id: {
+    customer_id: {
       type: DataTypes.STRING(20),
       allowNull: false,
       references: {
         model: "customers",
-        key: "user_id",
+        key: "customer_id",
       },
       onUpdate: "CASCADE",
       onDelete: "CASCADE",
@@ -54,7 +58,7 @@ const ShoppingCartItem = sequelize.define(
     indexes: [
       {
         unique: true,
-        fields: ["user_id", "product_id"],
+        fields: ["customer_id", "product_id"],
         name: "unique_user_product",
       },
     ],

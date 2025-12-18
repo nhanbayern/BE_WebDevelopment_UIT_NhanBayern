@@ -29,4 +29,6 @@ client_secret.json
 test.js
 .vscode
 
+#TrashFolder
 presentation/
+docs/

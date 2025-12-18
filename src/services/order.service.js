@@ -3,9 +3,16 @@ import Order from "../models/order.model.js";
 import OrderDetail from "../models/order_detail.model.js";
 import Product from "../models/product.model.js";
 import Customer from "../models/user.model.js";
-import UserAddress from "../models/user_address.model.js";
+import CustomerAddress from "../models/user_address.model.js";
 import ShoppingCartItem from "../models/shopping_cart_item.model.js";
 import Payment from "../models/payment.model.js";
+import OrderAudit from "../models/order_audit.model.js";
+import PaymentAudit from "../models/payment_audit.model.js";
+
+/**
+ * Order Service
+ * UPDATED: Uses customer_id, CustomerAddress, and includes audit logging for staff actions
+ */
 
 /**
  * Helper: Map new payment_status enum to legacy enum for API compatibility
@@ -106,8 +113,8 @@ export const createOrder = async ({
       : null;
 
     if (!shippingAddressStr && normalizedAddressId) {
-      const address = await UserAddress.findOne({
-        where: { address_id: normalizedAddressId, user_id },
+      const address = await CustomerAddress.findOne({
+        where: { address_id: normalizedAddressId, customer_id: user_id },
         transaction,
       });
 
@@ -243,7 +250,7 @@ export const createOrder = async ({
     if (orderedProductIds.length > 0) {
       await ShoppingCartItem.destroy({
         where: {
-          user_id,
+          customer_id: user_id,
           product_id: orderedProductIds,
         },
         transaction,
@@ -352,10 +359,14 @@ export const getOrderDetail = async (order_id) => {
 };
 
 /**
- * Update order status
+ * Update order status (UPDATED with audit logging)
+ * @param {number} order_id - Order ID
+ * @param {string} order_status - New status
+ * @param {string} staff_id - Staff ID performing the action (required for audit)
+ * @param {string} note - Optional note about the status change
  */
-export const updateOrderStatus = async (order_id, order_status) => {
-  const validStatuses = ["Preparing", "On delivery", "Delivered"];
+export const updateOrderStatus = async (order_id, order_status, staff_id = null, note = null) => {
+  const validStatuses = ["Preparing", "On delivery", "Delivered", "Cancelled"];
 
   if (!validStatuses.includes(order_status)) {
     throw {
@@ -364,24 +375,56 @@ export const updateOrderStatus = async (order_id, order_status) => {
     };
   }
 
-  const [updatedCount] = await Order.update(
-    { order_status },
-    { where: { order_id } }
-  );
+  const transaction = await sequelize.transaction();
 
-  if (updatedCount === 0) {
-    throw { code: "ORDER_NOT_FOUND", message: "Đơn hàng không tồn tại" };
+  try {
+    // Get current order to capture old status
+    const order = await Order.findByPk(order_id, { transaction });
+
+    if (!order) {
+      throw { code: "ORDER_NOT_FOUND", message: "Đơn hàng không tồn tại" };
+    }
+
+    const oldStatus = order.order_status;
+
+    // Update order status
+    await Order.update(
+      { order_status },
+      { where: { order_id }, transaction }
+    );
+
+    // Create audit log if staff_id provided (staff operation)
+    if (staff_id) {
+      await OrderAudit.create(
+        {
+          order_id,
+          staff_id,
+          old_status: oldStatus,
+          new_status: order_status,
+          note,
+        },
+        { transaction }
+      );
+    }
+
+    await transaction.commit();
+
+    return { status: "success", message: "Cập nhật trạng thái thành công" };
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
   }
-
-  return { status: "success", message: "Cập nhật trạng thái thành công" };
 };
 
 /**
- * Update payment status
+ * Update payment status (UPDATED with audit logging)
  * REFACTORED: Now updates the payments table instead of orders table
  * Maintains backward compatibility with legacy 'Unpaid'/'Paid' API values
+ * @param {number} order_id - Order ID
+ * @param {string} payment_status - New status ('Unpaid' or 'Paid' for legacy API)
+ * @param {string} staff_id - Staff ID performing the action (required for audit)
  */
-export const updatePaymentStatus = async (order_id, payment_status) => {
+export const updatePaymentStatus = async (order_id, payment_status, staff_id = null) => {
   const validStatuses = ["Unpaid", "Paid"];
 
   if (!validStatuses.includes(payment_status)) {
@@ -391,20 +434,50 @@ export const updatePaymentStatus = async (order_id, payment_status) => {
     };
   }
 
-  // Map legacy status to new schema status
-  const newPaymentStatus = mapLegacyToPaymentStatus(payment_status);
+  const transaction = await sequelize.transaction();
 
-  // Update the payment record instead of order record
-  const [updatedCount] = await Payment.update(
-    { payment_status: newPaymentStatus },
-    { where: { order_id } }
-  );
+  try {
+    // Map legacy status to new schema status
+    const newPaymentStatus = mapLegacyToPaymentStatus(payment_status);
 
-  if (updatedCount === 0) {
-    throw { code: "ORDER_NOT_FOUND", message: "Đơn hàng không tồn tại" };
+    // Get current payment to capture old status
+    const payment = await Payment.findOne({
+      where: { order_id },
+      transaction,
+    });
+
+    if (!payment) {
+      throw { code: "ORDER_NOT_FOUND", message: "Đơn hàng không tồn tại" };
+    }
+
+    const oldStatus = payment.payment_status;
+
+    // Update the payment record
+    await Payment.update(
+      { payment_status: newPaymentStatus },
+      { where: { order_id }, transaction }
+    );
+
+    // Create audit log if staff_id provided (staff operation)
+    if (staff_id) {
+      await PaymentAudit.create(
+        {
+          payment_id: payment.payment_id,
+          staff_id,
+          old_status: oldStatus,
+          new_status: newPaymentStatus,
+        },
+        { transaction }
+      );
+    }
+
+    await transaction.commit();
+
+    return { status: "success", message: "Cập nhật thanh toán thành công" };
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
   }
-
-  return { status: "success", message: "Cập nhật thanh toán thành công" };
 };
 
 /**

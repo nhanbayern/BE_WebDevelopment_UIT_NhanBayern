@@ -3,14 +3,19 @@ import Product from "../models/product.model.js";
 import sequelize from "../config/db.js";
 
 /**
+ * Shopping Cart Service
+ * UPDATED: Uses customer_id instead of user_id
+ */
+
+/**
  * Get all cart items for a user with product details
- * @param {string} userId - User ID
+ * @param {string} userId - Customer ID (user_id for backward compat)
  * @returns {Promise<Array>} Array of cart items with product info
  */
 export async function getCartItems(userId) {
   try {
     const cartItems = await ShoppingCartItem.findAll({
-      where: { user_id: userId },
+      where: { customer_id: userId },
       include: [
         {
           model: Product,
@@ -47,20 +52,18 @@ export async function getCartItems(userId) {
 
 /**
  * Add item to cart or update quantity if exists
- * Uses INSERT ... ON DUPLICATE KEY UPDATE for concurrency safety
- * @param {string} userId - User ID
+ * Uses INSERT ... ON DUPLICATE KEY UPDATE for concurrency safety (UPDATED to use customer_id)
+ * @param {string} userId - Customer ID
  * @param {string} productId - Product ID
  * @param {number} quantity - Quantity to add
  * @returns {Promise<Object>} Created/updated cart item
  */
 export async function addOrUpdateCartItem(userId, productId, quantity) {
   try {
-    // Use raw query with ON DUPLICATE KEY UPDATE for atomic operation
-    // This ensures concurrency-safe behavior in multi-instance setup
-    // Note: MySQL dialect requires positional (?) placeholders, not named (:name) placeholders
+    // UPDATED: Use customer_id instead of user_id
     const [results] = await sequelize.query(
       `
-      INSERT INTO shopping_cart_item (user_id, product_id, quantity, created_at, updated_at)
+      INSERT INTO shopping_cart_item (customer_id, product_id, quantity, created_at, updated_at)
       VALUES (?, ?, ?, NOW(), NOW())
       ON DUPLICATE KEY UPDATE 
         quantity = quantity + ?,
@@ -74,7 +77,7 @@ export async function addOrUpdateCartItem(userId, productId, quantity) {
 
     // Fetch the updated item with product details
     const cartItem = await ShoppingCartItem.findOne({
-      where: { user_id: userId, product_id: productId },
+      where: { customer_id: userId, product_id: productId },
       include: [
         {
           model: Product,
@@ -117,8 +120,8 @@ export async function addOrUpdateCartItem(userId, productId, quantity) {
 }
 
 /**
- * Update cart item quantity directly (set to specific value)
- * @param {string} userId - User ID
+ * Update cart item quantity directly (set to specific value) (UPDATED)
+ * @param {string} userId - Customer ID
  * @param {string} productId - Product ID
  * @param {number} quantity - New quantity
  * @returns {Promise<Object>} Updated cart item
@@ -126,7 +129,7 @@ export async function addOrUpdateCartItem(userId, productId, quantity) {
 export async function updateCartItemQuantity(userId, productId, quantity) {
   try {
     const cartItem = await ShoppingCartItem.findOne({
-      where: { user_id: userId, product_id: productId },
+      where: { customer_id: userId, product_id: productId },
     });
 
     if (!cartItem) {
@@ -138,7 +141,7 @@ export async function updateCartItemQuantity(userId, productId, quantity) {
 
     // Fetch with product details
     const updatedItem = await ShoppingCartItem.findOne({
-      where: { user_id: userId, product_id: productId },
+      where: { customer_id: userId, product_id: productId },
       include: [
         {
           model: Product,
@@ -177,15 +180,15 @@ export async function updateCartItemQuantity(userId, productId, quantity) {
 }
 
 /**
- * Remove item from cart
- * @param {string} userId - User ID
+ * Remove item from cart (UPDATED)
+ * @param {string} userId - Customer ID
  * @param {string} productId - Product ID
  * @returns {Promise<boolean>} Success status
  */
 export async function removeCartItem(userId, productId) {
   try {
     const deleted = await ShoppingCartItem.destroy({
-      where: { user_id: userId, product_id: productId },
+      where: { customer_id: userId, product_id: productId },
     });
 
     return deleted > 0;
@@ -196,15 +199,15 @@ export async function removeCartItem(userId, productId) {
 }
 
 /**
- * Increment cart item quantity by 1
- * @param {string} userId - User ID
+ * Increment cart item quantity by 1 (UPDATED)
+ * @param {string} userId - Customer ID
  * @param {string} productId - Product ID
  * @returns {Promise<Object>} Updated cart item
  */
 export async function incrementByOne(userId, productId) {
   try {
     const cartItem = await ShoppingCartItem.findOne({
-      where: { user_id: userId, product_id: productId },
+      where: { customer_id: userId, product_id: productId },
     });
 
     if (!cartItem) {
@@ -216,7 +219,7 @@ export async function incrementByOne(userId, productId) {
 
     // Fetch with product details
     const updatedItem = await ShoppingCartItem.findOne({
-      where: { user_id: userId, product_id: productId },
+      where: { customer_id: userId, product_id: productId },
       include: [
         {
           model: Product,
@@ -252,15 +255,15 @@ export async function incrementByOne(userId, productId) {
 }
 
 /**
- * Decrement cart item quantity by 1 (minimum 1)
- * @param {string} userId - User ID
+ * Decrement cart item quantity by 1 (minimum 1) (UPDATED)
+ * @param {string} userId - Customer ID
  * @param {string} productId - Product ID
  * @returns {Promise<Object>} Updated cart item
  */
 export async function decrementByOne(userId, productId) {
   try {
     const cartItem = await ShoppingCartItem.findOne({
-      where: { user_id: userId, product_id: productId },
+      where: { customer_id: userId, product_id: productId },
     });
 
     if (!cartItem) {
@@ -275,7 +278,7 @@ export async function decrementByOne(userId, productId) {
 
     // Fetch with product details
     const updatedItem = await ShoppingCartItem.findOne({
-      where: { user_id: userId, product_id: productId },
+      where: { customer_id: userId, product_id: productId },
       include: [
         {
           model: Product,
@@ -311,14 +314,14 @@ export async function decrementByOne(userId, productId) {
 }
 
 /**
- * Clear all cart items for a user
- * @param {string} userId - User ID
+ * Clear all cart items for a user (UPDATED)
+ * @param {string} userId - Customer ID
  * @returns {Promise<number>} Number of deleted items
  */
 export async function clearCart(userId) {
   try {
     const deleted = await ShoppingCartItem.destroy({
-      where: { user_id: userId },
+      where: { customer_id: userId },
     });
 
     return deleted;

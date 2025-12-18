@@ -28,8 +28,26 @@ const swaggerOptions = {
           type: "object",
           description: "Bảng customers lưu thông tin khách hàng",
           properties: {
-            user_id: { type: "string", example: "user001" },
-            username: { type: "string", example: "nhanbayern" },
+            customer_id: { 
+              type: "string", 
+              example: "C202512170001",
+              description: "Customer ID (primary key)"
+            },
+            customername: { 
+              type: "string", 
+              example: "Nguyễn Văn A",
+              description: "Customer's full name"
+            },
+            username: { 
+              type: "string", 
+              example: "Nguyễn Văn A",
+              description: "Backward compatibility alias for customername"
+            },
+            user_id: { 
+              type: "string", 
+              example: "C202512170001",
+              description: "Backward compatibility alias for customer_id"
+            },
             email: {
               type: "string",
               format: "email",
@@ -40,15 +58,22 @@ const swaggerOptions = {
               nullable: true,
               example: "0987654321",
             },
-            address: {
+            profileimage: {
               type: "string",
               nullable: true,
-              example: "123 Nguyễn Huệ, Q1, TP.HCM",
+              example: "https://res.cloudinary.com/dloe5xhbi/image/upload/v1234567890/avatars/C202512170001.jpg",
+              description: "Avatar URL from Cloudinary"
             },
             google_id: {
               type: "string",
               nullable: true,
               example: "110234567890123456789",
+            },
+            login_type: {
+              type: "string",
+              enum: ["google", "password"],
+              example: "password",
+              description: "Authentication method"
             },
             created_at: {
               type: "string",
@@ -56,7 +81,7 @@ const swaggerOptions = {
               example: "2025-12-01T10:15:00Z",
             },
           },
-          required: ["user_id", "username", "email"],
+          required: ["customer_id", "customername", "email"],
         },
         CustomerAccount: {
           type: "object",
@@ -330,7 +355,7 @@ const swaggerOptions = {
           properties: {
             session_id: { type: "integer", example: 210 },
             token_hash: { type: "string" },
-            user_id: { type: "string", example: "user001" },
+            user_id: { type: "string", example: "C202512170001", description: "customer_id or staff_id" },
             device_info: { type: "string", nullable: true },
             ip_address: {
               type: "string",
@@ -367,29 +392,30 @@ const swaggerOptions = {
           type: "object",
           properties: {
             item_id: { type: "integer", example: 5 },
-            user_id: { type: "string", example: "user001" },
+            customer_id: { type: "string", example: "C202512170001" },
             product_id: { type: "string", example: "SP001" },
             quantity: { type: "integer", example: 3 },
           },
-          required: ["item_id", "user_id", "product_id", "quantity"],
+          required: ["item_id", "customer_id", "product_id", "quantity"],
         },
-        UserAddress: {
+        CustomerAddress: {
           type: "object",
+          description: "Địa chỉ giao hàng của khách hàng",
           properties: {
             address_id: { type: "integer", example: 7 },
-            user_id: { type: "string", example: "user001" },
+            customer_id: { type: "string", example: "C202512170001" },
             address_line: { type: "string", example: "123 Lê Lợi" },
             ward: { type: "string", nullable: true, example: "Bến Nghé" },
             district: { type: "string", nullable: true, example: "Quận 1" },
             province: { type: "string", nullable: true, example: "TP.HCM" },
-            is_default: { type: "boolean", example: true },
+            is_default: { type: "integer", example: 1, description: "1 = default, 0 = not default" },
             address_code: {
               type: "string",
               nullable: true,
-              example: "ADDR-87F1",
+              example: "AddressC202512170001001",
             },
           },
-          required: ["address_id", "user_id", "address_line"],
+          required: ["address_id", "customer_id", "address_line"],
         },
       },
     },

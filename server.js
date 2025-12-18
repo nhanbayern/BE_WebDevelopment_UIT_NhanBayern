@@ -12,11 +12,10 @@ import productRoutes from "./src/routes/productRoutes.js";
 // Đảm bảo chỉ import customerAuthRoutes, xoá các dòng liên quan đến authRoutes nếu có
 import customerAuthRoutes from "./src/routes/customerAuthRoutes.js";
 import authRoutes from "./src/routes/authRoutes.js";
-import userRoutes from "./src/routes/userRoutes.js";
 import shoppingCartRoutes from "./src/routes/shoppingCartRoutes.js";
 import orderRoutes from "./src/routes/orderRoutes.js";
-import paymentRoutes from "./src/routes/payment.routes.js";
-// Import associations to set up model relationships
+import paymentRoutes from "./src/routes/payment.routes.js";import staffAuthRoutes from "./src/routes/staffAuthRoutes.js";
+import staffManagementRoutes from "./src/routes/staffManagementRoutes.js";// Import associations to set up model relationships
 import "./src/models/associations.js";
 //  Import swagger config
 import setupSwagger from "./apidoc/swagger-apidoc.js";
@@ -26,6 +25,8 @@ import {
   getCookieSecurityOptions,
   shouldTrustProxy,
 } from "./src/utils/cookie_config.js";
+// Import Cloudinary configuration
+import { testConnection as testCloudinaryConnection } from "./src/config/cloudinary.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, ".env") });
@@ -62,17 +63,26 @@ function collectOrigins() {
   const parsed = originCandidates
     .filter(Boolean)
     .flatMap((item) => item.split(","))
+    .map((item) => item.trim()) // Trim whitespace from each item
     .map(normalizeOrigin)
     .filter(Boolean);
 
   if (!isProd) {
     parsed.push("http://localhost:5174", "http://127.0.0.1:5174");
+    // Also allow the staff management frontend port if set in environment
+    if (process.env.STAFF_MANAGEMENT_PORT) {
+      const port = process.env.STAFF_MANAGEMENT_PORT.trim();
+      parsed.push(`http://localhost:${port}`, `http://127.0.0.1:${port}`);
+    }
   }
 
   return Array.from(new Set(parsed));
 }
 
 const allowedOrigins = collectOrigins();
+
+// Debug: Log loaded origins on startup
+console.log('🔐 CORS Allowed Origins:', allowedOrigins);
 
 // Allow the configured origin, and also common dev origins (Vite default 5174).
 // Use a function to echo the incoming origin when it matches allowed patterns
@@ -92,6 +102,10 @@ app.use(
       return callback(new Error("Not allowed by CORS"), false);
     },
     credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-API-ORIGIN"],
+    exposedHeaders: ["Content-Length", "Content-Type"],
+    maxAge: 86400, // 24 hours
   })
 );
 
@@ -110,8 +124,9 @@ app.use((req, res, next) => {
 });
 // parse cookies (để đọc HttpOnly refresh token)
 app.use(cookieParser());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Increase payload size limits for file uploads
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 const { sameSite: cookieSameSite, secure: cookieSecure } =
   getCookieSecurityOptions();
@@ -153,21 +168,25 @@ if (process.env.NODE_ENV !== "production") {
 
 // Routes setup
 app.use("/RuouOngTu/products", productRoutes);
-// Mount customer routes under the RuouOngTu base
+// Mount customer routes under the RuouOngTu base (includes profile, addresses, auth)
 app.use("/RuouOngTu/customer", customerAuthRoutes);
 // Mount auth-specific routes (refresh, logout)
 app.use("/RuouOngTu/auth", authRoutes);
-// User profile & address management
-app.use("/RuouOngTu/user", userRoutes);
 
-// Shopping cart routes (under /user prefix)
-app.use("/RuouOngTu/user", shoppingCartRoutes);
+// Shopping cart routes (under /customer prefix)
+app.use("/RuouOngTu/customer", shoppingCartRoutes);
 
 // Order routes
 app.use("/RuouOngTu/orders", orderRoutes);
 
 // Payment routes (VNPay) align with /RuouOngTu namespace (no /api prefix)
 app.use("/RuouOngTu/payment", paymentRoutes);
+
+// Staff Authentication routes
+app.use("/RuouOngTu/staff/auth", staffAuthRoutes);
+
+// Staff Management routes (authenticated staff only)
+app.use("/RuouOngTu/staff", staffManagementRoutes);
 
 // Server listen
 // NOTE: CORS and cookieParser already configured above. No duplicate middleware here.
@@ -208,11 +227,16 @@ function logNetworkInfo() {
   }
 }
 
-app.listen(PORT, HOST, () => {
+app.listen(PORT, HOST, async () => {
   console.log(`✅ Server đang chạy ở cổng ${PORT} (host ${HOST})`);
   const apiOrigin = resolveApiBaseOrigin();
   console.log(`🛠️  Base API: ${apiOrigin}/RuouOngTu`);
   console.log(`📘 API Docs: ${apiOrigin}/api-docs`);
   logNetworkInfo();
+  
+  // Test Cloudinary connection
+  console.log("\n🔌 Testing external services...");
+  await testCloudinaryConnection();
+  
   startTokenCleanupScheduler();
 });

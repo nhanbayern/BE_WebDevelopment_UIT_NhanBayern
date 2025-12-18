@@ -35,12 +35,13 @@ export const loginWithPassword = async (req, res) => {
       return res.status(401).json({ success: false, message: result.message });
     }
     // Create refresh token session and login_log (with session_id)
+    // Note: account_id parameter is deprecated but kept for backward compatibility
     const onLogin = await onLoginSuccess(
       result.user,
       res,
       ip,
       userAgent,
-      result.account?.account_id || null,
+      null, // account_id no longer used
       email
     );
     return res
@@ -88,7 +89,7 @@ export const googleLoginCallback = async (req, res) => {
       res,
       ip,
       userAgent,
-      result.account?.account_id || null,
+      null, // account_id no longer used
       userGoogle.email
     );
     const payload = {

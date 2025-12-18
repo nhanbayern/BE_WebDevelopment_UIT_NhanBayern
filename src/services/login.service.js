@@ -11,29 +11,42 @@ function hashToken(token) {
   return crypto.createHash("sha256").update(token).digest("hex");
 }
 
+/**
+ * Handle successful customer login
+ * UPDATED: Uses customer_id instead of user_id, no more account_id
+ */
 export async function onLoginSuccess(
   user,
   res,
   ip,
   userAgent,
-  account_id = null,
+  account_id = null, // Deprecated but kept for backward compatibility
   input_username = null
 ) {
-  const payload = { user_id: user.user_id, email: user.email };
+  // Support both old (user_id) and new (customer_id) field names
+  const customerId = user.customer_id || user.user_id;
+  const customerName = user.customername || user.username;
+  
+  // Generate tokens with new field names
+  const payload = { 
+    customer_id: customerId,
+    user_id: customerId, // Backward compat
+    email: user.email,
+    customername: customerName,
+  };
   const accessToken = generateAccessToken(payload);
-  const refreshToken = generateRefreshToken({ user_id: user.user_id });
+  const refreshToken = generateRefreshToken({ user_id: customerId });
 
-  // compute refresh expiry from env (days)
   const refreshDays = parseInt(
     process.env.REFRESH_TOKEN_EXPIRES_DAYS || "30",
     10
   );
   const refreshMaxAge = refreshDays * 24 * 60 * 60 * 1000;
 
-  // store hashed refresh token and obtain session_id
+  // Store hashed refresh token
   const created = await RefreshToken.create({
     token_hash: hashToken(refreshToken),
-    user_id: user.user_id,
+    user_id: customerId, // Note: refresh_tokens table still uses user_id column
     device_info: userAgent,
     ip_address: ip,
     expires_at: new Date(Date.now() + refreshMaxAge),
@@ -41,13 +54,14 @@ export async function onLoginSuccess(
 
   const session_id = created.session_id;
 
-  // create login log linking to this session
+  // Create login log with customer_id (NEW SCHEMA)
   try {
     await LoginLog.create({
       session_id,
-      account_id,
+      customer_id: customerId,
+      staff_id: null, // This is a customer login, not staff
       input_username,
-      username: user.username || user.user_id,
+      username: customerName || customerId,
       ip_address: ip,
       user_agent: userAgent,
       status: "success",
@@ -56,10 +70,6 @@ export async function onLoginSuccess(
     console.error("Failed to write login log in onLoginSuccess:", err);
   }
 
-  // set cookie HttpOnly. Use SameSite=None to allow cross-origin requests from the frontend (dev runs on different port).
-  // secure is enabled in production only (requires HTTPS).
-  // In development use SameSite='lax' so browsers don't require Secure flag.
-  // In production use SameSite='none' and secure=true so cross-site cookies work over HTTPS.
   const { secure, sameSite, domain } = getCookieSecurityOptions();
   res.cookie("refreshToken", refreshToken, {
     httpOnly: true,
@@ -70,10 +80,21 @@ export async function onLoginSuccess(
     maxAge: refreshMaxAge,
   });
 
-  // Debug log for cookie attributes (helps diagnose browser acceptance)
   console.log(
     `[COOKIE DEBUG] set refreshToken cookie: domain=${domain ?? "<dynamic>"}, sameSite=${sameSite}, secure=${secure}, maxAge=${refreshMaxAge}`
   );
 
-  return { accessToken, user, session_id };
+  // Return user data with backward compatibility
+  const userResponse = {
+    customer_id: customerId,
+    user_id: customerId, // Backward compat
+    customername: customerName,
+    username: customerName, // Backward compat
+    email: user.email,
+    phone_number: user.phone_number,
+    google_id: user.google_id,
+    created_at: user.created_at,
+  };
+
+  return { accessToken, user: userResponse, session_id };
 }

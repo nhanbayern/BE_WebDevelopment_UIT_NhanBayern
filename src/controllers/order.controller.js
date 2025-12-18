@@ -191,11 +191,12 @@ export const getOrderDetail = async (req, res) => {
 /**
  * PATCH /orders/:order_id/status
  * Update order status (admin/staff only)
+ * UPDATED: Pass staff_id for audit logging
  */
 export const updateOrderStatus = async (req, res) => {
   try {
     const { order_id } = req.params;
-    const { order_status } = req.body;
+    const { order_status, note } = req.body;
 
     if (!order_status) {
       return res.status(400).json({
@@ -204,7 +205,15 @@ export const updateOrderStatus = async (req, res) => {
       });
     }
 
-    const result = await orderService.updateOrderStatus(order_id, order_status);
+    // Get staff_id from auth middleware if available (req.staff set by authenticateStaff)
+    const staff_id = req.staff?.staff_id || null;
+
+    const result = await orderService.updateOrderStatus(
+      order_id,
+      order_status,
+      staff_id,
+      note
+    );
 
     return res.status(200).json(result);
   } catch (error) {
@@ -233,7 +242,8 @@ export const updateOrderStatus = async (req, res) => {
 
 /**
  * PATCH /orders/:order_id/payment-status
- * Update payment status
+ * Update payment status (admin/staff only)
+ * UPDATED: Pass staff_id for audit logging
  */
 export const updatePaymentStatus = async (req, res) => {
   try {
@@ -247,9 +257,13 @@ export const updatePaymentStatus = async (req, res) => {
       });
     }
 
+    // Get staff_id from auth middleware if available
+    const staff_id = req.staff?.staff_id || null;
+
     const result = await orderService.updatePaymentStatus(
       order_id,
-      payment_status
+      payment_status,
+      staff_id
     );
 
     return res.status(200).json(result);
