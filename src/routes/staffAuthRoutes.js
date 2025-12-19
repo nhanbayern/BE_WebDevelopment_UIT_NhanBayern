@@ -183,6 +183,56 @@ router.post("/login", staffAuthController.loginStaff);
 
 /**
  * @swagger
+ * /staff/auth/logout:
+ *   post:
+ *     summary: Staff logout
+ *     description: |
+ *       Logout the authenticated staff member by revoking the refresh token.
+ *       
+ *       **Actions:**
+ *       - Revoke the refresh token (mark as revoked in database)
+ *       - Update login logs with logout_time and status='logout'
+ *       - Clear the staffRefreshToken cookie
+ *       
+ *       **Usage:**
+ *       - Called when staff clicks logout button
+ *       - Refresh token stored in HttpOnly cookie (no body needed)
+ *       - Prevents reuse of revoked token
+ *     tags: [Staff Authentication]
+ *     responses:
+ *       200:
+ *         description: Logout successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Đăng xuất thành công"
+ *       400:
+ *         description: Refresh token not provided
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Refresh token không được cung cấp"
+ *       500:
+ *         description: Server error during logout
+ */
+router.post("/logout", staffAuthController.logoutStaff);
+
+/**
+ * @swagger
  * /staff/auth/refresh:
  *   post:
  *     summary: Refresh staff access token

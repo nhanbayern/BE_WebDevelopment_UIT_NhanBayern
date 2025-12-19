@@ -454,3 +454,85 @@ export async function refreshStaffAccessToken(refreshToken) {
     return { success: false, message: "Lỗi khi làm mới token" };
   }
 }
+
+/**
+ * Logout staff - revoke refresh token and update login logs
+ * @param {string} refreshToken - Refresh token from cookie
+ * @returns {object} - Logout result
+ */
+export async function logoutStaff(refreshToken) {
+  try {
+    if (!refreshToken) {
+      return {
+        success: false,
+        message: "Refresh token không được cung cấp",
+      };
+    }
+
+    const tokenHash = hashToken(refreshToken);
+
+    // Find the refresh token row to get session_id
+    const row = await RefreshToken.findOne({
+      where: { token_hash: tokenHash },
+    });
+
+    if (row) {
+      // Revoke the refresh token and set revoked_at
+      await RefreshToken.update(
+        { revoked: true, revoked_at: new Date() },
+        { where: { session_id: row.session_id } }
+      );
+
+      // Update login_logs for this session_id
+      try {
+        // Try to set logout_time and status='logout'
+        await LoginLog.update(
+          { logout_time: new Date(), status: "logout" },
+          {
+            where: {
+              session_id: row.session_id,
+            },
+          }
+        );
+      } catch (e) {
+        console.error(
+          "[StaffAuthService] Failed to update login_logs with status (attempt 1):",
+          e
+        );
+        try {
+          // Fallback: at least update logout_time only
+          await LoginLog.update(
+            { logout_time: new Date() },
+            {
+              where: {
+                session_id: row.session_id,
+              },
+            }
+          );
+        } catch (e2) {
+          console.error(
+            "[StaffAuthService] Failed to update login_logs logout_time (fallback):",
+            e2
+          );
+        }
+      }
+    } else {
+      // If no DB row, still attempt to revoke by hash
+      await RefreshToken.update(
+        { revoked: true, revoked_at: new Date() },
+        { where: { token_hash: tokenHash } }
+      );
+    }
+
+    return {
+      success: true,
+      message: "Đăng xuất thành công",
+    };
+  } catch (error) {
+    console.error("[StaffAuthService] Logout error:", error);
+    return {
+      success: false,
+      message: "Lỗi khi đăng xuất",
+    };
+  }
+}

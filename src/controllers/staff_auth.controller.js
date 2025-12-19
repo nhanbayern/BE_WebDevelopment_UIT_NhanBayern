@@ -256,3 +256,37 @@ export async function refreshStaffToken(req, res) {
     });
   }
 }
+
+/**
+ * POST /staff/auth/logout
+ * Staff logout - revoke refresh token and update login logs
+ */
+export async function logoutStaff(req, res) {
+  try {
+    const refreshToken = req.cookies.staffRefreshToken;
+
+    if (!refreshToken) {
+      return res.status(400).json({
+        success: false,
+        message: "Refresh token không được cung cấp",
+      });
+    }
+
+    const result = await staffAuthService.logoutStaff(refreshToken);
+
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+
+    // Clear the refresh token cookie
+    res.clearCookie("staffRefreshToken", { path: "/" });
+
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error("[StaffAuthController] Logout error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Lỗi khi đăng xuất",
+    });
+  }
+}
