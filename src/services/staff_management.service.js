@@ -1,5 +1,6 @@
 import Customer from "../models/user.model.js";
 import Order from "../models/order.model.js";
+import OrderDetail from "../models/order_detail.model.js";
 import Product from "../models/product.model.js";
 import Manufacturer from "../models/manufacturer.model.js";
 import Payment from "../models/payment.model.js";
@@ -73,6 +74,50 @@ export async function getOrderById(order_id) {
   } catch (error) {
     console.error("[StaffManagementService] Get order error:", error);
     return { success: false, message: "Lỗi khi lấy thông tin đơn hàng" };
+  }
+}
+
+/**
+ * Get order details with product information
+ */
+export async function getOrderDetails(order_id) {
+  try {
+    const orderDetails = await OrderDetail.findAll({
+      where: { order_id },
+      include: [
+        {
+          model: Product,
+          as: "product",
+          attributes: [
+            "product_id",
+            "product_name",
+            "image",
+            "sale_price",
+            "stock",
+          ],
+        },
+      ],
+    });
+
+    if (!orderDetails || orderDetails.length === 0) {
+      return { success: false, message: "Không tìm thấy chi tiết đơn hàng" };
+    }
+
+    // Format response
+    const details = orderDetails.map((detail) => ({
+      product_id: detail.product_id,
+      product_name: detail.product?.product_name || "N/A",
+      image: detail.product?.image || null,
+      sale_price: detail.product?.sale_price ? parseFloat(detail.product.sale_price) : 0,
+      unit_price: parseFloat(detail.unit_price),
+      quantity: detail.quantity,
+      total_price: parseFloat(detail.total_price),
+    }));
+
+    return { success: true, orderDetails: details };
+  } catch (error) {
+    console.error("[StaffManagementService] Get order details error:", error);
+    return { success: false, message: "Lỗi khi lấy chi tiết đơn hàng" };
   }
 }
 

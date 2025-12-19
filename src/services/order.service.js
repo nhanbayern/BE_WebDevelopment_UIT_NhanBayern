@@ -553,14 +553,6 @@ export const cancelOrder = async (order_id, user_id) => {
       });
     }
 
-    // Step 7: Update payment record to "Failed"
-    if (order.payment) {
-      await Payment.update(
-        { payment_status: "Failed" },
-        { where: { order_id }, transaction }
-      );
-    }
-
     // Commit transaction
     await transaction.commit();
 

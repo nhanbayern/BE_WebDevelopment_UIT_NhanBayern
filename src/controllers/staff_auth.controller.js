@@ -34,7 +34,29 @@ export async function loginStaff(req, res) {
       return res.status(401).json(result);
     }
 
-    return res.status(200).json(result);
+    // Set refresh token as HttpOnly cookie (30 days)
+    // Always use secure=true and sameSite=none for HTTPS API
+    const cookieOptions = {
+      httpOnly: true,
+      secure: true, // Required for HTTPS and SameSite=none
+      sameSite: "none", // Allow cross-origin cookies (localhost to HTTPS API)
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+      path: "/", // Ensure cookie is available for all paths
+    };
+    
+    res.cookie("staffRefreshToken", result.refreshToken, cookieOptions);
+    
+    console.log("[STAFF LOGIN] Cookie set:", {
+      cookieOptions,
+      hasRefreshToken: !!result.refreshToken,
+      tokenLength: result.refreshToken?.length,
+      requestOrigin: req.headers.origin
+    });
+
+    // Don't send refreshToken in response body
+    const { refreshToken, ...responseData } = result;
+
+    return res.status(200).json(responseData);
   } catch (error) {
     console.error("[StaffAuthController] Login error:", error);
     return res.status(500).json({
@@ -200,6 +222,37 @@ export async function updateStaffProfile(req, res) {
     return res.status(500).json({
       success: false,
       message: "Lỗi khi cập nhật thông tin",
+    });
+  }
+}
+
+/**
+ * POST /staff/auth/refresh
+ * Refresh staff access token using refresh token from cookie
+ */
+export async function refreshStaffToken(req, res) {
+  try {
+    const refreshToken = req.cookies.staffRefreshToken;
+    
+    if (!refreshToken) {
+      return res.status(401).json({
+        success: false,
+        message: "Refresh token không tồn tại",
+      });
+    }
+
+    const result = await staffAuthService.refreshStaffAccessToken(refreshToken);
+
+    if (!result.success) {
+      return res.status(401).json(result);
+    }
+
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error("[StaffAuthController] Refresh token error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Lỗi khi làm mới token",
     });
   }
 }

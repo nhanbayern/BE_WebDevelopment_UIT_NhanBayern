@@ -2,6 +2,7 @@ import express from "express";
 import * as staffAuthController from "../controllers/staff_auth.controller.js";
 import { authenticateStaff } from "../middleware/auth_middleware.js";
 import { uploadStaffProfileImage } from "../middleware/upload.middleware.js";
+import { refreshStaffToken } from "../controllers/staff_refresh_token.controller.js";
 
 const router = express.Router();
 
@@ -118,6 +119,7 @@ const router = express.Router();
  * /staff/auth/login:
  *   post:
  *     summary: Staff login
+ *     description: Authenticate staff and receive access token (15 minutes) and refresh token (30 days in HttpOnly cookie)
  *     tags: [Staff Authentication]
  *     requestBody:
  *       required: true
@@ -127,17 +129,123 @@ const router = express.Router();
  *             $ref: '#/components/schemas/StaffLoginRequest'
  *     responses:
  *       200:
- *         description: Login successful
+ *         description: Login successful. Refresh token is set as HttpOnly cookie named 'staffRefreshToken'
+ *         headers:
+ *           Set-Cookie:
+ *             description: Refresh token stored in HttpOnly cookie
+ *             schema:
+ *               type: string
+ *               example: staffRefreshToken=eyJhbGc...; HttpOnly; Secure; SameSite=Strict; Max-Age=2592000
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/StaffLoginResponse'
+ *             example:
+ *               success: true
+ *               message: "Đăng nhập thành công"
+ *               accessToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ *               staff:
+ *                 staff_id: "staff001"
+ *                 login_name: "admin01"
+ *                 staff_name: "Admin User"
+ *                 email: "admin@example.com"
+ *                 phone_number: "0123456789"
+ *                 position: "Manager"
+ *                 status: "ACTIVE"
  *       401:
- *         description: Invalid credentials
+ *         description: Invalid credentials or account inactive
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Mật khẩu không đúng"
  *       400:
- *         description: Missing login_name or password
+ *         description: Missing required fields
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Vui lòng cung cấp tên đăng nhập và mật khẩu"
  */
 router.post("/login", staffAuthController.loginStaff);
+
+/**
+ * @swagger
+ * /staff/auth/refresh:
+ *   post:
+ *     summary: Refresh staff access token
+ *     description: |
+ *       Use refresh token (from HttpOnly cookie 'staffRefreshToken') to get new access token.
+ *       
+ *       **Token Expiry:**
+ *       - Access Token: 15 minutes
+ *       - Refresh Token: 30 days
+ *       
+ *       **Usage:**
+ *       - Automatically called by frontend when access token expires
+ *       - Refresh token stored in HttpOnly cookie (secure)
+ *       - Returns new 15-minute access token without re-login
+ *     tags: [Staff Authentication]
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: New access token generated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 accessToken:
+ *                   type: string
+ *                   description: New JWT access token (valid for 15 minutes)
+ *                   example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ *                 staff:
+ *                   $ref: '#/components/schemas/StaffProfile'
+ *             example:
+ *               success: true
+ *               accessToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ *               staff:
+ *                 staff_id: "staff001"
+ *                 login_name: "admin01"
+ *                 staff_name: "Admin User"
+ *                 email: "admin@example.com"
+ *                 phone_number: "0123456789"
+ *                 position: "Manager"
+ *                 profileimg: "https://res.cloudinary.com/..."
+ *                 status: "ACTIVE"
+ *       401:
+ *         description: Refresh token invalid, expired, or revoked
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Refresh token không tồn tại"
+ *       500:
+ *         description: Server error
+ */
+router.post("/refresh", refreshStaffToken);
 
 /**
  * @swagger

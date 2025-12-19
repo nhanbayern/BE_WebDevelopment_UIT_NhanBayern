@@ -291,6 +291,64 @@ router.get("/orders/:order_id", staffManagementController.getOrderById);
 
 /**
  * @swagger
+ * /staff/orderdetails/{order_id}:
+ *   get:
+ *     summary: Get order details (products in order)
+ *     description: Retrieve all product details for a specific order including product info, quantity, and prices
+ *     tags: [Staff - Orders]
+ *     security:
+ *       - StaffBearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: order_id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Order ID
+ *         example: 123
+ *     responses:
+ *       200:
+ *         description: Order details retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 orderDetails:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       product_id:
+ *                         type: string
+ *                         example: "P001"
+ *                       product_name:
+ *                         type: string
+ *                         example: "Rượu Vodka Premium"
+ *                       image:
+ *                         type: string
+ *                         example: "https://res.cloudinary.com/..."
+ *                       unit_price:
+ *                         type: number
+ *                         example: 500000
+ *                       quantity:
+ *                         type: integer
+ *                         example: 2
+ *                       total_price:
+ *                         type: number
+ *                         example: 1000000
+ *       404:
+ *         description: Order details not found
+ *       401:
+ *         description: Not authenticated
+ */
+router.get("/orderdetails/:order_id", staffManagementController.getOrderDetails);
+
+/**
+ * @swagger
  * /staff/orders/{order_id}:
  *   put:
  *     summary: Update order information

@@ -2,9 +2,16 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import path from "path";
 import fs from "fs";
+import crypto from "crypto";
 import Staff from "../models/staff.model.js";
 import LoginLog from "../models/loginlog.model.js";
+import RefreshToken from "../models/refresh_token.model.js";
 import { uploadImage, deleteImage } from "../config/cloudinary.js";
+import { generateRefreshToken, verifyRefreshToken } from "../utils/jwt.util.js";
+
+function hashToken(token) {
+  return crypto.createHash("sha256").update(token).digest("hex");
+}
 
 /**
  * Staff Authentication Service
@@ -75,11 +82,36 @@ export async function loginStaff(login_name, password, ip, userAgent) {
       return { success: false, message: "Mật khẩu không đúng" };
     }
 
-    // Generate access token
+    // Generate access token (15 minutes)
     const accessToken = generateStaffAccessToken(staff);
 
-    // Log successful login
+    // Generate refresh token (30 days)
+    const refreshToken = generateRefreshToken({
+      user_id: staff.staff_id, // Use user_id column for staff_id
+      staff_id: staff.staff_id,
+      login_name: staff.login_name,
+      type: "staff",
+    });
+
+    // Store refresh token in shared refresh_tokens table
+    const tokenHash = hashToken(refreshToken);
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 30); // 30 days
+
+    const created = await RefreshToken.create({
+      token_hash: tokenHash,
+      user_id: staff.staff_id, // Store staff_id in user_id column
+      device_info: userAgent,
+      ip_address: ip,
+      expires_at: expiresAt,
+      last_used_at: new Date(),
+    });
+
+    const session_id = created.session_id;
+
+    // Log successful login with session_id
     await LoginLog.create({
+      session_id,
       customer_id: null,
       staff_id: staff.staff_id,
       input_username: login_name,
@@ -93,6 +125,7 @@ export async function loginStaff(login_name, password, ip, userAgent) {
       success: true,
       message: "Đăng nhập thành công",
       accessToken,
+      refreshToken,
       staff: {
         staff_id: staff.staff_id,
         login_name: staff.login_name,
@@ -124,7 +157,7 @@ function generateStaffAccessToken(staff) {
   };
 
   const secret = process.env.JWT_SECRET || process.env.ACCESS_TOKEN_SECRET;
-  const expiresIn = process.env.ACCESS_TOKEN_EXPIRY || "1h";
+  const expiresIn = "1m"; // Changed to 15 minutes for security
 
   return jwt.sign(payload, secret, { expiresIn });
 }
@@ -349,5 +382,75 @@ export async function updateStaffProfile(staff_id, updateData, profileImgFile = 
   } catch (error) {
     console.error("[StaffAuthService] Update profile error:", error);
     return { success: false, message: "Lỗi khi cập nhật thông tin" };
+  }
+}
+
+/**
+ * Refresh staff access token using refresh token
+ * @param {string} refreshToken - Refresh token from cookie
+ * @returns {object} - New access token or error
+ */
+export async function refreshStaffAccessToken(refreshToken) {
+  try {
+    // Verify refresh token
+    const payload = verifyRefreshToken(refreshToken);
+    
+    if (!payload || !payload.staff_id) {
+      return { success: false, message: "Refresh token không hợp lệ" };
+    }
+
+    // Check if token exists and is not revoked
+    const tokenHash = hashToken(refreshToken);
+    const storedToken = await RefreshToken.findOne({
+      where: { token_hash: tokenHash },
+    });
+
+    if (!storedToken) {
+      return { success: false, message: "Refresh token không tồn tại" };
+    }
+
+    if (storedToken.revoked) {
+      return { success: false, message: "Refresh token đã bị thu hồi" };
+    }
+
+    // Check if token is expired
+    if (new Date() > new Date(storedToken.expires_at)) {
+      return { success: false, message: "Refresh token đã hết hạn" };
+    }
+
+    // Get staff information
+    const staff = await Staff.findByPk(payload.staff_id);
+
+    if (!staff) {
+      return { success: false, message: "Staff không tồn tại" };
+    }
+
+    if (staff.status !== "ACTIVE") {
+      return { success: false, message: "Tài khoản đã bị vô hiệu hóa" };
+    }
+
+    // Generate new access token
+    const newAccessToken = generateStaffAccessToken(staff);
+
+    // Update last_used_at
+    await storedToken.update({ last_used_at: new Date() });
+
+    return {
+      success: true,
+      accessToken: newAccessToken,
+      staff: {
+        staff_id: staff.staff_id,
+        login_name: staff.login_name,
+        staff_name: staff.staff_name,
+        email: staff.email,
+        phone_number: staff.phone_number,
+        position: staff.position,
+        profileimg: staff.profileimg,
+        status: staff.status,
+      },
+    };
+  } catch (error) {
+    console.error("[StaffAuthService] Refresh token error:", error);
+    return { success: false, message: "Lỗi khi làm mới token" };
   }
 }

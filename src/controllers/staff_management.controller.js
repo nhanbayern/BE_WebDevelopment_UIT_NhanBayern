@@ -50,6 +50,26 @@ export async function getOrderById(req, res) {
   }
 }
 
+export async function getOrderDetails(req, res) {
+  try {
+    const { order_id } = req.params;
+
+    const result = await staffManagementService.getOrderDetails(order_id);
+
+    if (!result.success) {
+      return res.status(404).json(result);
+    }
+
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error("[StaffManagementController] Get order details error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Lỗi khi lấy chi tiết đơn hàng",
+    });
+  }
+}
+
 export async function updateOrder(req, res) {
   try {
     const { order_id } = req.params;
