@@ -42,6 +42,14 @@ router.use(authenticateStaff);
  *           type: string
  *         shipping_address:
  *           type: string
+ *         address_line:
+ *           type: string
+ *         ward:
+ *           type: string
+ *         district:
+ *           type: string
+ *         province:
+ *           type: string
  *         shipping_partner:
  *           type: string
  *         order_status:
@@ -62,7 +70,13 @@ router.use(authenticateStaff);
  *           enum: [Preparing, On delivery, Delivered, Cancelled]
  *         shipping_partner:
  *           type: string
- *         shipping_address:
+ *         address_line:
+ *           type: string
+ *         ward:
+ *           type: string
+ *         district:
+ *           type: string
+ *         province:
  *           type: string
  *         recipient_name:
  *           type: string

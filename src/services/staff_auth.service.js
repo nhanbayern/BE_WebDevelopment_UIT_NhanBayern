@@ -157,7 +157,7 @@ function generateStaffAccessToken(staff) {
   };
 
   const secret = process.env.JWT_SECRET || process.env.ACCESS_TOKEN_SECRET;
-  const expiresIn = "1m"; // Changed to 15 minutes for security
+  const expiresIn = "15m"; // 15 minutes for security
 
   return jwt.sign(payload, secret, { expiresIn });
 }

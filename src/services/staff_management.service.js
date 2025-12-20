@@ -70,7 +70,22 @@ export async function getOrderById(order_id) {
       return { success: false, message: "Đơn hàng không tồn tại" };
     }
 
-    return { success: true, order };
+    // Split shipping_address into separate fields for frontend
+    const orderData = order.toJSON();
+    if (orderData.shipping_address) {
+      const addressParts = orderData.shipping_address.split(",").map(part => part.trim());
+      orderData.address_line = addressParts[0] || "";
+      orderData.ward = addressParts[1] || "";
+      orderData.district = addressParts[2] || "";
+      orderData.province = addressParts[3] || "";
+    } else {
+      orderData.address_line = "";
+      orderData.ward = "";
+      orderData.district = "";
+      orderData.province = "";
+    }
+
+    return { success: true, order: orderData };
   } catch (error) {
     console.error("[StaffManagementService] Get order error:", error);
     return { success: false, message: "Lỗi khi lấy thông tin đơn hàng" };
@@ -135,6 +150,16 @@ export async function updateOrder(order_id, updateData, staff_id) {
 
     const oldStatus = order.order_status;
     const oldData = order.toJSON();
+
+    // Handle separated address fields - concatenate them into shipping_address
+    if (updateData.address_line || updateData.ward || updateData.district || updateData.province) {
+      const addressParts = [];
+      if (updateData.address_line) addressParts.push(updateData.address_line.trim());
+      if (updateData.ward) addressParts.push(updateData.ward.trim());
+      if (updateData.district) addressParts.push(updateData.district.trim());
+      if (updateData.province) addressParts.push(updateData.province.trim());
+      updateData.shipping_address = addressParts.join(", ");
+    }
 
     // Update order
     const allowedFields = [
