@@ -58,7 +58,7 @@ CREATE TABLE IF NOT EXISTS `backend`.`customer_address` (
     REFERENCES `backend`.`customers` (`customer_id`)
     ON DELETE CASCADE)
 ENGINE = InnoDB
-AUTO_INCREMENT = 15
+AUTO_INCREMENT = 17
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -105,6 +105,7 @@ CREATE TABLE IF NOT EXISTS `backend`.`customer_audit` (
     FOREIGN KEY (`staff_id`)
     REFERENCES `backend`.`staff` (`staff_id`))
 ENGINE = InnoDB
+AUTO_INCREMENT = 3
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -132,7 +133,7 @@ CREATE TABLE IF NOT EXISTS `backend`.`emailotp` (
   INDEX `idx_email_otp_email` (`email` ASC) VISIBLE,
   INDEX `idx_email_otp_ip` (`ip_address` ASC) VISIBLE)
 ENGINE = InnoDB
-AUTO_INCREMENT = 17
+AUTO_INCREMENT = 23
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -157,7 +158,7 @@ CREATE TABLE IF NOT EXISTS `backend`.`login_logs` (
   INDEX `account_id` (`customer_id` ASC) VISIBLE,
   INDEX `idx_session_id` (`session_id` ASC) VISIBLE)
 ENGINE = InnoDB
-AUTO_INCREMENT = 243
+AUTO_INCREMENT = 4588
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -166,7 +167,7 @@ COLLATE = utf8mb4_unicode_ci;
 -- Table `backend`.`manufacturers`
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `backend`.`manufacturers` (
-  `manufacturer_id` VARCHAR(10) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NOT NULL,
+  `manufacturer_id` VARCHAR(20) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NOT NULL,
   `manufacturer_name` VARCHAR(255) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NOT NULL,
   `address` VARCHAR(255) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NULL DEFAULT NULL,
   `province` VARCHAR(100) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NULL DEFAULT NULL,
@@ -200,7 +201,7 @@ CREATE TABLE IF NOT EXISTS `backend`.`orders` (
     FOREIGN KEY (`customer_id`)
     REFERENCES `backend`.`customers` (`customer_id`))
 ENGINE = InnoDB
-AUTO_INCREMENT = 37
+AUTO_INCREMENT = 51
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -226,6 +227,7 @@ CREATE TABLE IF NOT EXISTS `backend`.`order_audit` (
     FOREIGN KEY (`staff_id`)
     REFERENCES `backend`.`staff` (`staff_id`))
 ENGINE = InnoDB
+AUTO_INCREMENT = 11
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -234,7 +236,7 @@ COLLATE = utf8mb4_unicode_ci;
 -- Table `backend`.`products`
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `backend`.`products` (
-  `product_id` VARCHAR(10) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NOT NULL,
+  `product_id` VARCHAR(25) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NOT NULL,
   `product_name` VARCHAR(255) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NOT NULL,
   `image` VARCHAR(255) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NULL DEFAULT NULL,
   `alcohol_content` DECIMAL(4,2) NOT NULL,
@@ -248,7 +250,7 @@ CREATE TABLE IF NOT EXISTS `backend`.`products` (
   `stock` INT NULL DEFAULT '0',
   `category` VARCHAR(100) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NULL DEFAULT NULL,
   `region` VARCHAR(100) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NULL DEFAULT NULL,
-  `manufacturer_id` VARCHAR(10) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NOT NULL,
+  `manufacturer_id` VARCHAR(20) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci' NOT NULL,
   `created_at` DATETIME NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` DATETIME NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`product_id`),
@@ -284,7 +286,7 @@ CREATE TABLE IF NOT EXISTS `backend`.`order_details` (
     FOREIGN KEY (`product_id`)
     REFERENCES `backend`.`products` (`product_id`))
 ENGINE = InnoDB
-AUTO_INCREMENT = 61
+AUTO_INCREMENT = 87
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -309,7 +311,7 @@ CREATE TABLE IF NOT EXISTS `backend`.`payments` (
     ON DELETE CASCADE
     ON UPDATE CASCADE)
 ENGINE = InnoDB
-AUTO_INCREMENT = 7
+AUTO_INCREMENT = 21
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -334,6 +336,7 @@ CREATE TABLE IF NOT EXISTS `backend`.`payment_audit` (
     FOREIGN KEY (`staff_id`)
     REFERENCES `backend`.`staff` (`staff_id`))
 ENGINE = InnoDB
+AUTO_INCREMENT = 13
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -359,6 +362,7 @@ CREATE TABLE IF NOT EXISTS `backend`.`product_audit` (
     FOREIGN KEY (`staff_id`)
     REFERENCES `backend`.`staff` (`staff_id`))
 ENGINE = InnoDB
+AUTO_INCREMENT = 31
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -382,7 +386,7 @@ CREATE TABLE IF NOT EXISTS `backend`.`refresh_tokens` (
   INDEX `idx_token_hash` (`token_hash` ASC) VISIBLE,
   INDEX `idx_user_id` (`user_id` ASC) VISIBLE)
 ENGINE = InnoDB
-AUTO_INCREMENT = 324
+AUTO_INCREMENT = 402
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -408,7 +412,7 @@ CREATE TABLE IF NOT EXISTS `backend`.`shopping_cart_item` (
     FOREIGN KEY (`product_id`)
     REFERENCES `backend`.`products` (`product_id`))
 ENGINE = InnoDB
-AUTO_INCREMENT = 110
+AUTO_INCREMENT = 136
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -453,3 +457,4 @@ DELIMITER ;
 SET SQL_MODE=@OLD_SQL_MODE;
 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;
 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;
+s

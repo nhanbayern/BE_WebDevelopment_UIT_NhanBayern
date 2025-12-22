@@ -208,6 +208,13 @@ export async function createProduct(req, res) {
     const productData = req.body;
     const imageFile = req.file; // From multer middleware
 
+    // Log received data for debugging
+    console.log("[StaffManagementController] Create product request:", {
+      staff_id,
+      productData,
+      hasImageFile: !!imageFile,
+    });
+
     const result = await staffManagementService.createProduct(
       productData,
       imageFile,
@@ -215,6 +222,7 @@ export async function createProduct(req, res) {
     );
 
     if (!result.success) {
+      console.error("[StaffManagementController] Create product failed:", result);
       return res.status(400).json(result);
     }
 
@@ -224,6 +232,7 @@ export async function createProduct(req, res) {
     return res.status(500).json({
       success: false,
       message: "Lỗi khi tạo sản phẩm",
+      error: error.message,
     });
   }
 }

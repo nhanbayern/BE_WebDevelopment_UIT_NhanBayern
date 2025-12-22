@@ -15,6 +15,35 @@ import { uploadToCloudinary, deleteFromCloudinary } from "../config/cloudinary.j
  * Handles staff operations on customers, orders, products, manufacturers, payments
  */
 
+// ==================== HELPER FUNCTIONS ====================
+
+/**
+ * Generate unique product ID
+ * Format: P + 9 random digits (e.g., P123456789)
+ * Ensures uniqueness by checking database
+ */
+async function generateProductId() {
+  const maxAttempts = 10;
+  
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    // Generate 9 random digits
+    const randomDigits = Math.floor(100000000 + Math.random() * 900000000);
+    const product_id = `P${randomDigits}`;
+    
+    // Check if ID already exists
+    const existingProduct = await Product.findByPk(product_id);
+    
+    if (!existingProduct) {
+      return product_id;
+    }
+  }
+  
+  // Fallback: use timestamp + random 3 digits if all attempts fail
+  const timestamp = Date.now().toString().slice(-6);
+  const random3 = Math.floor(100 + Math.random() * 900);
+  return `P${timestamp}${random3}`;
+}
+
 // ==================== ORDER MANAGEMENT ====================
 
 /**
@@ -357,10 +386,8 @@ export async function getProductById(product_id) {
  */
 export async function createProduct(productData, imageFile, staff_id) {
   try {
-    // Generate product_id
-    const product_id = `P${Date.now()}${Math.floor(Math.random() * 1000)
-      .toString()
-      .padStart(3, "0")}`;
+    // Generate unique product_id (P + 9 digits)
+    const product_id = await generateProductId();
 
     let imageUrl = null;
 
@@ -416,7 +443,21 @@ export async function createProduct(productData, imageFile, staff_id) {
     };
   } catch (error) {
     console.error("[StaffManagementService] Create product error:", error);
-    return { success: false, message: "Lỗi khi tạo sản phẩm" };
+    
+    // Provide detailed error message
+    let errorMessage = "Lỗi khi tạo sản phẩm";
+    
+    if (error.name === "SequelizeValidationError") {
+      errorMessage = `Dữ liệu không hợp lệ: ${error.errors.map(e => e.message).join(", ")}`;
+    } else if (error.name === "SequelizeUniqueConstraintError") {
+      errorMessage = "Sản phẩm đã tồn tại";
+    } else if (error.name === "SequelizeForeignKeyConstraintError") {
+      errorMessage = "Nhà sản xuất không tồn tại";
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+    
+    return { success: false, message: errorMessage, error: error.message };
   }
 }
 
@@ -654,7 +695,16 @@ export async function getAllPayments(filters = {}) {
       order: [["created_at", "DESC"]],
     });
 
-    return { success: true, payments };
+    // Add order_code directly to each payment for easier access
+    const paymentsWithOrderCode = payments.map((payment) => {
+      const paymentData = payment.toJSON();
+      return {
+        ...paymentData,
+        order_code: paymentData.order?.order_code || null,
+      };
+    });
+
+    return { success: true, payments: paymentsWithOrderCode };
   } catch (error) {
     console.error("[StaffManagementService] Get all payments error:", error);
     return { success: false, message: "Lỗi khi lấy danh sách thanh toán" };

@@ -240,7 +240,7 @@ export const createOrder = async ({
     // Step 5: Deduct inventory
     for (const item of validatedItems) {
       await Product.decrement("stock", {
-        by: item.quantity,
+        by: item.quantity,  
         where: { product_id: item.product_id },
         transaction,
       });
